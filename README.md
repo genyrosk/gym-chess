@@ -1,5 +1,7 @@
 # gym-chess
 
+### Setup
+
 Install the environment:
 
 ``` python
@@ -20,6 +22,7 @@ env = gym.make('ChessVsSelf-v0')
 
 ```
 
+### Play
 
 You can either get available moves and convert them into the action space, or get the available actions directly. 
 
@@ -63,6 +66,15 @@ state, reward, done, __ = env.step(action)
 
 ```
 
+Reset the environment:
+
+``` python 
+
+initial_state = env.reset()
+
+```
+
+### Visualise the chess board
 
 Visualise the current state of the chess game:
 
@@ -82,14 +94,6 @@ env.render_moves(state, piece, moves, mode='human')
 
 ```
 
-Reset the environment:
-
-``` python 
-
-initial_state = env.reset()
-
-```
-
 You can also retrieve the list of squares that pieces are attacking and defending by specifying the "attack" option:
 
 ``` python
@@ -97,3 +101,9 @@ You can also retrieve the list of squares that pieces are attacking and defendin
 attacking_moves = env.get_possible_moves(state, player, attack=True)
 
 ```
+
+## TODO
+
+- Castling moves
+- *En passant* move
+- Asking/Accepting a draw action
