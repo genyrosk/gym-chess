@@ -123,7 +123,7 @@ class ChessEnv(gym.Env):
 
 		# make move
 		self.state, reward, self.done = self.player_move(
-			self.current_player, copy(self.state), action, render=self.log, render_msg='Player '+str(self.current_player))
+			self.current_player, self.state, action, render=self.log, render_msg='Player '+str(self.current_player))
 
 		# player vs. player game
 		if not self.opponent_policy:
@@ -141,7 +141,7 @@ class ChessEnv(gym.Env):
 
 			# make move
 			self.state, opp_reward, self.done = self.player_move(
-				-1, copy(self.state), opp_action, render=self.log, render_msg='Opponent')
+				-1, self.state, opp_action, render=self.log, render_msg='Opponent')
 
 			total_reward = reward - opp_reward
 			self.state['on_move'] += 1
@@ -429,7 +429,7 @@ class ChessEnv(gym.Env):
 
 			saving_moves = list(filter(
 				lambda move: 
-				no_check_next_state(copy(state), move, player), 
+				no_check_next_state(state, move, player), 
 				total_moves
 			))
 
@@ -579,7 +579,7 @@ class ChessEnv(gym.Env):
 		PAWN ACTIONS
 		------------
 		"""
-		board = copy(state['board'])
+		board = state['board']
 		pos = np.array(position)
 		go_to = []
 
@@ -638,7 +638,7 @@ class ChessEnv(gym.Env):
 		If opponent king is encountered, then there's a problem...
 		=> return [<bool> add_move]
 		"""
-		board = copy(state['board'])
+		board = state['board']
 		checked_squares = ChessEnv.squares_attacked(state, player)
 
 		if not ChessEnv.pos_is_in_board(move):
@@ -666,7 +666,7 @@ class ChessEnv(gym.Env):
 		If opponent king is encountered, then there's a problem...
 		=> return [<bool> add_move]
 		"""
-		board = copy(state['board'])
+		board = state['board']
 		if not ChessEnv.pos_is_in_board(move):
 			return False
 		elif ChessEnv.is_own_piece(board, move, player):
@@ -709,7 +709,7 @@ class ChessEnv(gym.Env):
 		- opponent pieces (excluding king)
 		=> return [<bool> add_move, <bool> break]
 		"""
-		board = copy(state['board'])
+		board = state['board']
 		if not ChessEnv.pos_is_in_board(move):
 			return False, True
 		elif ChessEnv.is_own_piece(board, move, player):
@@ -733,7 +733,7 @@ class ChessEnv(gym.Env):
 		- own pieces
 		=> return [<bool> add_move, <bool> break]
 		"""
-		board = copy(state['board'])
+		board = state['board']
 		if not ChessEnv.pos_is_in_board(move):
 			return False, True
 		elif ChessEnv.is_own_piece(board, move, player):
