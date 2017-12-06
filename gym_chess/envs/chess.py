@@ -18,10 +18,6 @@ uniDict = {
 	'.': '.'
 }
 
-pieces_values = {
-	'p': 1, 'r': 5, 'n': 3, 'b': 3, 'k': None, 'q': 10, '.': 0
-}
-
 pieces_to_ids = {
 	'R1': 1, 'N1': 2, 'B1': 3, 'Q': 4, 'K': 5, 'B2': 6, 'N2': 7, 'R2': 8,
 	'P1': 9, 'P2': 10, 'P3': 11, 'P4': 12, 'P5': 13, 'P6': 14, 'P7': 15, 'P8': 16, 
@@ -56,8 +52,8 @@ def make_random_policy(np_random):
 
 class ChessEnv(gym.Env):
 
+	pieces_values = {'p': 1, 'r': 5, 'n': 3, 'b': 3, 'k': None, 'q': 10, '.': 0}
 	ids_to_pieces = {v: k for k, v in pieces_to_ids.items()}
-
 	WHITE = 1
 	BLACK = -1
 	#metadata = {'render.modes': ['human']}
@@ -163,9 +159,9 @@ class ChessEnv(gym.Env):
 		if prev_piece != 0:
 			new_state['captured'][player].append(prev_piece)
 		###Render
-		if render: 
-			ChessEnv.render_moves(state, move['piece_id'], [move], mode='human')
-			print(' '*10, '>'*10, render_msg)
+		# if render: 
+		# 	ChessEnv.render_moves(state, move['piece_id'], [move], mode='human')
+		# 	print(' '*10, '>'*10, render_msg)
 			# self._render()
 		return new_state, reward, False
 
@@ -343,7 +339,7 @@ class ChessEnv(gym.Env):
 
 		# Reward for capturing a piece 
 		piece_type = ChessEnv.ids_to_pieces[prev_piece][0].lower()
-		reward += pieces_values[piece_type]
+		reward += ChessEnv.pieces_values[piece_type]
 
 		# check for castle
 		# TODO
@@ -353,11 +349,11 @@ class ChessEnv(gym.Env):
 			if (player == 1 and new_pos[0] == 7):
 				ChessEnv.ids_to_pieces[piece_id] = 'Q'
 				reward += 10
-				print(' '*40, '!! ==> Player', player, 'pawn became a Queen <== !!', end='')
+				# print(' '*40, '!! ==> Player', player, 'pawn became a Queen <== !!', end='')
 			elif (player == -1 and new_pos[0] == 0):
 				ChessEnv.ids_to_pieces[piece_id] = 'q'
 				reward += 10
-				print(' '*40, '!! ==> Player', player, 'pawn became a Queen <== !!', end='')
+				# print(' '*40, '!! ==> Player', player, 'pawn became a Queen <== !!', end='')
 
 		new_state['board'] = board
 		return new_state, prev_piece, reward
@@ -432,8 +428,7 @@ class ChessEnv(gym.Env):
 				no_check_next_state(state, move, player), 
 				total_moves
 			))
-
-			print('saving_moves', saving_moves)
+			# print('saving_moves', saving_moves)
 			return saving_moves
 		else:
 			return total_moves
