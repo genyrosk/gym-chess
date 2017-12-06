@@ -1,4 +1,12 @@
-# gym chess environment
+# gym-chess
+
+Install the environment:
+
+``` python
+
+pip install -e .  
+
+```
 
 Play against yourself or against a random bot.
 
