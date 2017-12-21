@@ -56,15 +56,18 @@ class ChessEnv(gym.Env):
 	ids_to_pieces = {v: k for k, v in pieces_to_ids.items()}
 	WHITE = 1
 	BLACK = -1
+	CASTLE_MOVE_ID = 20
+	KING_CATSLE = 1
+	QUEEN_CATSLE = 2
 	#metadata = {'render.modes': ['human']}
 
 	def __init__(self, player_color=1, opponent="random", log=True):
 		self.moves_max = 149
 		self.log = log
 		
-		# One action (for each board position) x (no. of pieces), 2xcastles, draw and resign
+		# One action (for each board position) x (no. of pieces), 2xcastles, offer/accept draw and resign
 		self.observation_space = spaces.Box(-16,16, (8,8)) # board 8x8
-		self.action_space = spaces.Discrete(64*16 + 4)
+		self.action_space = spaces.Discrete(64*16 + 5)
 
 		self.player = player_color # define player # TODO: implement
 		self.opponent = opponent # define opponent
@@ -154,7 +157,10 @@ class ChessEnv(gym.Env):
 			copy(state), move, player)
 		#Keep track of movements
 		piece_id = move['piece_id']
-		new_state['kr_moves'][piece_id] += 1
+		if piece_id == 20:
+			new_state['kr_moves'][player*5] += 1
+		else:
+			new_state['kr_moves'][piece_id] += 1
 		#Save material captured
 		if prev_piece != 0:
 			new_state['captured'][player].append(prev_piece)
@@ -184,11 +190,11 @@ class ChessEnv(gym.Env):
 		self.state['captured'] = {1: [], -1: []}
 
 		# Board
-		board = [['R1', 'N1', 'B1', 'Q', 'K', 'B2', 'N2', 'R2']]
+		board = [['R1', 'N1', 'B1', 'K', '.', '.', '.', 'R2']]
 		board += [['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8']]
 		board += [['.']*8] * 4
 		board += [['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8']]
-		board += [['r1', 'n1', 'b1', 'q', 'k', 'b2', 'n2', 'r2']]
+		board += [['r1', 'n1', 'b1', 'k', 'q', 'b2', 'n2', 'r2']]
 		self.state['board'] = np.array([[pieces_to_ids[x] for x in row] for row in board])
 		self.state['prev_board'] = copy(self.state['board'])
 
@@ -207,11 +213,14 @@ class ChessEnv(gym.Env):
 
 
 	def _render(self, mode='human', close=False):
+		return ChessEnv.render_board(self.state, mode=mode, close=close)
+
+	@staticmethod
+	def render_board(state, mode='human', close=False):
 		"""
 		Render the playing board
 		"""
-		board = self.state['board']
-		# print(board)
+		board = state['board']
 		outfile = StringIO() if mode == 'ansi' else sys.stdout
 
 		outfile.write('    ')
@@ -241,7 +250,10 @@ class ChessEnv(gym.Env):
 		Render the possible moves that a piece can take
 		"""
 		board = state['board']
-		moves_pos = [m['new_pos'] for m in moves if m['piece_id']==piece_id]
+		if piece_id == ChessEnv.CASTLE_MOVE_ID: # castling
+			moves_pos = [m['new_pos'] for m in moves if m['piece_id']==piece_id]
+		else:
+			moves_pos = [m['new_pos'] for m in moves if m['piece_id']==piece_id]
 
 		outfile = StringIO() if mode == 'ansi' else sys.stdout
 		outfile.write('    ')
@@ -259,7 +271,10 @@ class ChessEnv(gym.Env):
 					outfile.write('<{}>'.format(figure))
 				elif moves_pos and any(np.equal(moves_pos,[i,j]).all(1)):
 					if piece == '.':
-						outfile.write(' {} '.format('X'))
+						if piece_id == ChessEnv.CASTLE_MOVE_ID:
+							outfile.write('0-0')
+						else:
+							outfile.write(' X ')
 					else:
 						outfile.write('+{}+'.format(figure))
 				else:
@@ -276,47 +291,88 @@ class ChessEnv(gym.Env):
 
 
 	@staticmethod
-	def resign_action(board_size=8):
-		return board_size**2 * 16 + 1
+	def resign_action():
+		return 8**2 * 16 + 5
+	@staticmethod
+	def has_resigned(action):
+		return action == ChessEnv.resign_action()
 
 	@staticmethod
-	def has_resigned(action, board_size=8):
-		return action == ChessEnv.resign_action(board_size=board_size)
+	def offer_draw_action():
+		return 8**2 * 16 + 3
+	@staticmethod
+	def draw_offered(action, ):
+		return action == ChessEnv.offer_draw_action()
+
+	@staticmethod
+	def accept_draw_action():
+		return 8**2 * 16 + 4
+	@staticmethod
+	def draw_accepted():
+		return action == ChessEnv.accept_draw_action()
+
+	@staticmethod
+	def castle_move_to_action(castle_type):
+		return 8**2 * 16 + abs(castle_type)
 
 	@staticmethod
 	def move_to_actions(move):
 		"""
 		Encode move into action
 		"""
-		if move == 'resign':
-			return ChessEnv.resign_action(board_size=8)
+		# if move == 'resign':
+		# 	return ChessEnv.resign_action()
+
+		if move['type'] == 'castling':
+			return ChessEnv.castle_move_to_action(move['castle'])
 		else:
 			piece_id = move['piece_id']
 			new_pos = move['new_pos']
 			return 64*(abs(piece_id) - 1) + (new_pos[0]*8 + new_pos[1]).item()
-			# return 64*(abs(piece_id) + 8*(1 - sign(piece_id)) - 1) + (new_pos[0]*8 + new_pos[1]).item()
 
 	@staticmethod
 	def action_to_move(action, player):
 		"""
 		Decode move from action
 		"""
-		square = action % 64 
-		column = square % 8
-		row = (square - column) // 8
-		piece_id = (action - square) // 64 + 1
-		# if piece_id > 16:
-		# 	piece_id = 16 - piece_id
-		return {
-			'piece_id': piece_id * player,
-			'new_pos': np.array([int(row), int(column)])
+		t = 8**2 * 16
+		castles_pos = {
+			1: { 
+				ChessEnv.KING_CATSLE: [0, 1],
+				ChessEnv.QUEEN_CATSLE: [0, 5],
+			},
+			-1: {
+				ChessEnv.KING_CATSLE: [7, 1],
+				ChessEnv.QUEEN_CATSLE: [7, 5],
+			}
 		}
 
+		if action in [t+1, t+2]: # castling
+			castle_type = action - (8**2 * 16)
+			new_pos = castles_pos[player][castle_type]
+			return {
+				'piece_id': player * ChessEnv.CASTLE_MOVE_ID,
+				'pos': None,
+				'new_pos': new_pos,
+				'type': 'castling',
+				'castle': castle_type
+			}
+		else:
+			square = action % 64 
+			column = square % 8
+			row = (square - column) // 8
+			piece_id = (action - square) // 64 + 1
+			return {
+				'piece_id': piece_id * player,
+				'new_pos': np.array([int(row), int(column)]),
+			}
 
 	@staticmethod
 	def next_state(state, move, player):
 		"""
 		Return the next state given a move
+		-------
+		(next_state, previous_piece, reward)
 		"""
 		new_state = copy(state)
 		new_state['prev_board'] = copy(state['board'])
@@ -325,6 +381,12 @@ class ChessEnv(gym.Env):
 		new_pos = move['new_pos']
 		piece_id = move['piece_id']
 		reward = 0
+
+		# check for castle
+		# TODO
+		if piece_id == ChessEnv.CASTLE_MOVE_ID:
+			return ChessEnv.castle_action_to_state(
+						state, player, move['castle']), 0, 0
 
 		# find old position 
 		old_pos = np.array([x[0] for x in np.where(board == piece_id)])
@@ -340,9 +402,6 @@ class ChessEnv(gym.Env):
 		# Reward for capturing a piece 
 		piece_type = ChessEnv.ids_to_pieces[prev_piece][0].lower()
 		reward += ChessEnv.pieces_values[piece_type]
-
-		# check for castle
-		# TODO
 
 		# check for pawn becoming a queen
 		if ChessEnv.ids_to_pieces[piece_id][0].lower() == 'p':
@@ -360,6 +419,27 @@ class ChessEnv(gym.Env):
 
 
 	@staticmethod
+	def castle_action_to_state(state, player, castle_move):
+		board = copy(state['board'])
+		kr_moves = state['kr_moves']
+		assert kr_moves[5*player] == 0, "Castling move error - king has already moved"
+		king_pos = np.where(board == player*5)
+		king_x, king_y = king_pos[0][0], king_pos[1][0]
+
+		# make castling move
+		if castle_move == ChessEnv.KING_CATSLE:
+			board[king_x, king_y+1] = player*5
+			board[king_x, king_y+2] = player*8
+		elif castle_move == ChessEnv.QUEEN_CATSLE:
+			board[king_x, king_y-1] = player*5
+			board[king_x, king_y-2] = player*1
+		else:
+			raise Exception("ERROR - NON-EXISTENT CASTLING MOVE") 
+
+		return state
+
+
+	@staticmethod
 	def get_possible_actions(state, player):
 		moves = ChessEnv.get_possible_moves(state, player)
 		return [ChessEnv.move_to_actions(m) for m in moves]
@@ -374,7 +454,6 @@ class ChessEnv(gym.Env):
 		new_position - (row, column)
 		"""
 		board = state['board']
-		kr_moves = state['kr_moves']
 		total_moves = []
 
 		for position, piece_id in np.ndenumerate(board):
@@ -382,8 +461,7 @@ class ChessEnv(gym.Env):
 
 				piece_name = ChessEnv.ids_to_pieces[piece_id]
 				piece_type = piece_name[0].lower()
-				assert piece_type in ['k', 'q', 'r', 'b', 'n', 'p', '.'], "inexistent piece type"
-				moves = []
+				#assert piece_type in ['k', 'q', 'r', 'b', 'n', 'p', '.'], "ERROR - inexistent piece type"
 
 				if piece_type == 'k':
 					moves = ChessEnv.king_actions(state, position, player, attack=attack)
@@ -398,23 +476,38 @@ class ChessEnv(gym.Env):
 				elif piece_type == 'p':
 					moves = ChessEnv.pawn_actions(state, position, player, attack=attack)
 				elif piece_type == '.':
+					moves = []
 					continue
+				else:
+					raise Exception("ERROR - inexistent piece type ") 
 
 				# formatting
 				for m in moves:
 					total_moves.append({
 							'piece_id': piece_id,
 							'pos': position,
-							'new_pos': m
+							'new_pos': m,
+							'type': 'move'
 						})
 			else: 
 				continue
 
 		# TODO: add castling
+		if not attack: 
+			castle_moves = ChessEnv.castle_moves(state, player)
+			if castle_moves:
+				for k, v in castle_moves.items():
+					total_moves.append({
+								'piece_id': player * ChessEnv.CASTLE_MOVE_ID,
+								'pos': None,
+								'new_pos': v,
+								'type': 'castling',
+								'castle': k
+							})
 
-		# print('total_moves',total_moves)
-		# if not attack:
-		# 	ChessEnv.render_moves(state, 5*player, total_moves, mode='human')
+				# print('===============> We got some castling moves !!!')
+				# print('player', player)
+				# print(castle_moves)
 
 		# Check if the king is checked
 		if not attack and ChessEnv.king_is_checked(state, player):
@@ -456,15 +549,67 @@ class ChessEnv(gym.Env):
 					go_to.append(move)
 		return go_to
 
-
 	@staticmethod
-	def castle(state, player):
+	def castle_moves(state, player):
 		"""
 		CASTLE ACTIONS
 		----
 		"""
 		# TODO
-		pass
+		board = state['board']
+		kr_moves = state['kr_moves']
+		go_to = {}
+
+		# print(kr_moves[5*player], kr_moves[1*player], kr_moves[8*player])
+
+		if kr_moves[5*player] != 0:
+			return {}
+
+		# queen side
+		def queen_side_castle(board, kr_moves, player):
+			if kr_moves[8*player] != 0:
+				return {}
+			else:
+				king_pos = np.where(board == player*5)
+				king_x, king_y = king_pos[0][0], king_pos[1][0]
+				pos1 = [king_x, king_y+1]
+				pos2 = [king_x, king_y+2]
+
+				for p in [pos1, pos2]:
+					if board[p[0], p[1]] != 0:
+						return {}
+
+				sq_attacked = ChessEnv.squares_attacked(state, player)
+				for p in [pos1, pos2]:
+					if ChessEnv.move_in_list(p, sq_attacked):
+						return {}
+
+				return {ChessEnv.QUEEN_CATSLE: pos2}
+
+		# king side
+		def king_side_castle(board, kr_moves, player):
+			if kr_moves[1*player] != 0:
+				return {}
+			else:
+				king_pos = np.where(board == player*5)
+				king_x, king_y = king_pos[0][0], king_pos[1][0]
+				pos1 = [king_x, king_y-1]
+				pos2 = [king_x, king_y-2]
+
+				for p in [pos1, pos2]:
+					if board[p[0], p[1]] != 0:
+						return {}
+
+				sq_attacked = ChessEnv.squares_attacked(state, player)
+				for p in [pos1, pos2]:
+					if ChessEnv.move_in_list(p, sq_attacked):
+						return {}
+
+				return {ChessEnv.KING_CATSLE: pos2}
+
+		go_to = { **go_to, **queen_side_castle(board, kr_moves, player)}
+		go_to = { **go_to, **king_side_castle(board, kr_moves, player)}
+		return go_to
 
 
 	@staticmethod 
@@ -484,7 +629,6 @@ class ChessEnv(gym.Env):
 		ROOK ACTIONS
 		------------
 		"""
-		board = state['board']
 		pos = np.array(position)
 		go_to = []
 		
@@ -505,7 +649,6 @@ class ChessEnv(gym.Env):
 		BISHOP ACTIONS
 		--------------
 		"""
-		board = state['board']
 		pos = np.array(position)
 		go_to = []
 		
@@ -518,6 +661,9 @@ class ChessEnv(gym.Env):
 
 	@staticmethod
 	def iterative_steps(state, player, position, step, attack=False):
+		"""
+		Used to calculate Bishop, Rook and Queen moves
+		"""
 		go_to = []
 		pos = np.array(position)
 		step = np.array(step)
@@ -550,7 +696,6 @@ class ChessEnv(gym.Env):
 		--------------
 		"""
 		go_to = []
-		board = state['board']
 		pos = np.array(position)
 		moves = [pos + np.array([v,h]) for v in [-2, +2] for h in [-1, +1]]
 		moves += [pos + np.array([v,h]) for v in [-1, +1] for h in [-2, +2]]
@@ -587,7 +732,7 @@ class ChessEnv(gym.Env):
 		step_2 = np.array([2, 0]) * player
 
 		if attack:
-			# filter out the position of the king
+			# filter out the position of own king
 			filter1 = lambda move: ChessEnv.pos_is_in_board(move)
 			filter2 = lambda move: not ChessEnv.is_own_king(board, move, player)
 
@@ -596,6 +741,7 @@ class ChessEnv(gym.Env):
 
 		else:
 			# moves only to empty squares
+			#
 			if (pos[0] == 1 and player == 1) or (pos[0] == 6 and player == -1):
 				if board[pos[0]+1*player, pos[1]] == 0:
 					move = pos + step_1
@@ -606,7 +752,7 @@ class ChessEnv(gym.Env):
 
 			# attacks only opponent's pieces
 			# TODO: en passant pawn capture
-			for m in attack_moves:
+			for m in reversed(attack_moves):
 				if not ChessEnv.pos_is_in_board(m):
 					continue
 				elif ChessEnv.is_own_piece(board, m, player):
@@ -615,11 +761,45 @@ class ChessEnv(gym.Env):
 					continue
 				elif ChessEnv.is_opponent_piece(board, m, player):
 					go_to.append(m)
+					attack_moves.pop()
 					continue
 				elif board[m[0], m[1]] == 0:
 					continue
 				else:
 					raise Exception("ERROR - PAWN ATTACK MOVES")
+
+			# En passant capture
+			#
+			if (pos[0] == 4 and player == 1) or (pos[0] == 3 and player == -1):
+				prev_board = state['prev_board']
+				for m in attack_moves:
+					if not ChessEnv.pos_is_in_board(m):
+						continue
+					elif ChessEnv.is_own_piece(board, m, player):
+						continue
+					elif ChessEnv.is_opponent_king(board, m, player):
+						continue
+					else:
+						col = m[1]
+						row = pos[0]
+						if player == 1:
+							prev_row = 6
+						else:
+							prev_row = 1
+
+						sq_before = prev_board[prev_row, col]
+						sq_after = board[row, col]
+
+						piece_before = ChessEnv.ids_to_pieces[sq_before]
+						piece_after = ChessEnv.ids_to_pieces[sq_after]
+
+						piece_type_before = piece_before[0].lower()
+						piece_type_after = piece_after[0].lower()
+
+						if piece_type_before == 'p' and piece_type_after == 'p':
+							print('='*40, 'En passant move detected !!!')
+							go_to.append(m)
+							# ChessEnv.render_moves(state, board[pos[0], pos[1]], moves, mode=)
 			return go_to
 
 
@@ -679,24 +859,6 @@ class ChessEnv(gym.Env):
 
 
 	@staticmethod
-	def move_in_list(move, move_list):
-		move_list = [ChessEnv.linearise_position(m) for m in move_list]
-		move = ChessEnv.linearise_position(move)
-		return move in move_list
-
-	@staticmethod
-	def linearise_position(position):
-		x, y = position[0], position[1]
-		return x + y*8
-
-	@staticmethod
-	def boardise_position(position):
-		x = position % 8
-		y = (position - x)//8
-		return x, y
-
-
-	@staticmethod
 	def playable_move(state, move, player):
 		"""
 		return squares to which a piece can move
@@ -741,23 +903,37 @@ class ChessEnv(gym.Env):
 			return True, False
 		else:
 			raise Exception('ATTACKING ERROR \n{} \n{} \n{}'.format(board, move, player))
+
+
+	"""
+	- flatten board
+	- find move in movelist
+	"""
+	@staticmethod
+	def move_in_list(move, move_list):
+		move_list_flat = [ChessEnv.flatten_position(m) for m in move_list]
+		move_flat = ChessEnv.flatten_position(move)
+		return move_flat in move_list_flat
+	@staticmethod
+	def flatten_position(position):
+		x, y = position[0], position[1]
+		return x + y*8
+	@staticmethod
+	def boardise_position(position):
+		x = position % 8
+		y = (position - x)//8
+		return x, y
  
 
 	@staticmethod
 	def pos_is_in_board(pos):
 		return not (pos[0] < 0 or pos[0] > 7 or pos[1] < 0 or pos[1] > 7)
-		# if pos[0] < 0 or pos[0] > 7 or pos[1] < 0 or pos[1] > 7:
-		# 	return False
-		# else:
-		# 	return True
-
 
 	@staticmethod 
 	def squares_attacked(state, player):
 		opponent_moves = ChessEnv.get_possible_moves(state, -player, attack=True)
 		attacked_pos = [m['new_pos'] for m in opponent_moves]
 		return attacked_pos
-
 
 	@staticmethod 
 	def king_is_checked(state, player):
@@ -769,11 +945,6 @@ class ChessEnv(gym.Env):
 		king_pos = [king_pos[0][0], king_pos[1][0]]
 		attacked_pos = ChessEnv.squares_attacked(state, player)
 		return (any(np.equal(attacked_pos, king_pos).all(1)))
-		# if any(np.equal(attacked_pos, king_pos).all(1)):
-		# 	return True
-		# else:
-		# 	return False
-
 
 	@staticmethod 
 	def king_is_mated(state, player):
@@ -783,6 +954,9 @@ class ChessEnv(gym.Env):
 		return False
 
 
+	"""
+	Player Pieces
+	"""
 	@staticmethod 
 	def is_own_piece(board, position, player):
 		return ChessEnv.is_player_piece(board, position, player)
@@ -793,14 +967,11 @@ class ChessEnv(gym.Env):
 	def is_player_piece(board, position, player):
 		x, y = position
 		return  (board[x,y] != 0 and sign(board[x,y]) == player)
-		# if board[x,y] == 0:
-		# 	return False
-		# elif sign(board[x,y]) == player:
-		# 	return True
-		# else:
-		# 	return False
 
 
+	"""
+	Player Kings
+	"""
 	@staticmethod 
 	def is_opponent_king(board, position, player):
 		return ChessEnv.is_player_king(board, position, -player)
@@ -811,10 +982,6 @@ class ChessEnv(gym.Env):
 	def is_player_king(board, position, player):
 		v, h = position
 		return (board[v, h] == player * 5)
-		# if board[v, h] == player * 5:
-		# 	return True
-		# else:
-		# 	return False
 
 
 	@staticmethod
@@ -824,8 +991,14 @@ class ChessEnv(gym.Env):
 		- disambiguation
 		- capture of opponent's piece marked with 'x'
 		"""
-		if move == 'resign':
-			return ''
+		if move['type'] == 'castling':
+			if move['castle'] == ChessEnv.KING_CATSLE:
+				return '0-0'
+			elif move['castle'] == ChessEnv.QUEEN_CATSLE:
+				return '0-0-0'
+			else:
+				raise Exception('ERROR - wrong castling type')
+
 		piece = ChessEnv.ids_to_pieces[move['piece_id']]
 		old_pos = move['pos']
 		new_pos = move['new_pos']
