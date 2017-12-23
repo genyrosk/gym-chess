@@ -104,6 +104,4 @@ attacking_moves = env.get_possible_moves(state, player, attack=True)
 
 ## TODO
 
-- Castling moves
-- *En passant* move
-- Asking/Accepting a draw action
+- threefold repetition

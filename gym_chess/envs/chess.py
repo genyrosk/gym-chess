@@ -177,12 +177,16 @@ class ChessEnv(gym.Env):
 		Resets the state of the environment, returning an initial observation.
 		Outputs -> observation : the initial observation of the space. (Initial reward is assumed to be 0.)
 		"""
-		self.done = False
-		self.state = {}
-		self.current_player = 1
+		# reset pieces (pawns that became queen become pawns again)
 		ChessEnv.ids_to_pieces = {v: k for k, v in pieces_to_ids.items()}
 
-		# register king's and rooks' moves
+		# vars
+		self.state = {}
+		self.done = False
+		self.current_player = 1
+		self.repetitions = 0     # 3 repetitions ==> DRAW
+
+		# register king's and rooks' (and all other pieces) moves
 		pieces = np.linspace(1, 16, 16, dtype=int)
 		self.state['kr_moves'] = {**{p: 0 for p in pieces}, **{-p: 0 for p in pieces}} 
 
