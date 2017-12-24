@@ -67,7 +67,7 @@ class ChessEnv(gym.Env):
 		
 		# One action (for each board position) x (no. of pieces), 2xcastles, offer/accept draw and resign
 		self.observation_space = spaces.Box(-16,16, (8,8)) # board 8x8
-		self.action_space = spaces.Discrete(64*16 + 5)
+		self.action_space = spaces.Discrete(64*16 + 6)
 
 		self.player = player_color # define player # TODO: implement
 		self.opponent = opponent # define opponent
@@ -112,7 +112,7 @@ class ChessEnv(gym.Env):
 		info : a dictionary containing other diagnostic information from the previous action
 		"""
 		# validate action
-		assert self.action_space.contains(action)
+		assert self.action_space.contains(action), "ACTION ERROR {}".format(action)
 
 		# Game is done
 		if self.done:
@@ -157,13 +157,20 @@ class ChessEnv(gym.Env):
 			copy(state), move, player)
 		#Keep track of movements
 		piece_id = move['piece_id']
-		if piece_id == 20:
+		if abs(piece_id) == ChessEnv.CASTLE_MOVE_ID:
 			new_state['kr_moves'][player*5] += 1
 		else:
 			new_state['kr_moves'][piece_id] += 1
 		#Save material captured
 		if prev_piece != 0:
 			new_state['captured'][player].append(prev_piece)
+		#Save current state and keep track of repetitions 
+		self.saved_states = ChessEnv.encode_current_state(state, self.saved_states)
+		self.repetitions = max([v for k, v in self.saved_states.items()])
+
+		#3-fold repetition => DRAW
+		if self.repetitions >= 3:
+			return new_state, 0, True
 		###Render
 		# if render: 
 		# 	ChessEnv.render_moves(state, move['piece_id'], [move], mode='human')
@@ -179,32 +186,28 @@ class ChessEnv(gym.Env):
 		"""
 		# reset pieces (pawns that became queen become pawns again)
 		ChessEnv.ids_to_pieces = {v: k for k, v in pieces_to_ids.items()}
-
 		# vars
 		self.state = {}
 		self.done = False
 		self.current_player = 1
+		self.saved_states = {}
 		self.repetitions = 0     # 3 repetitions ==> DRAW
-
 		# register king's and rooks' (and all other pieces) moves
 		pieces = np.linspace(1, 16, 16, dtype=int)
 		self.state['kr_moves'] = {**{p: 0 for p in pieces}, **{-p: 0 for p in pieces}} 
-
 		# material captured
 		self.state['captured'] = {1: [], -1: []}
+		# current move
+		self.state['on_move'] = 1
 
 		# Board
-		board = [['R1', 'N1', 'B1', 'K', '.', '.', '.', 'R2']]
+		board = [['R1', 'N1', 'B1', 'K', 'Q', 'B2', 'N2', 'R2']]
 		board += [['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8']]
 		board += [['.']*8] * 4
 		board += [['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8']]
 		board += [['r1', 'n1', 'b1', 'k', 'q', 'b2', 'n2', 'r2']]
 		self.state['board'] = np.array([[pieces_to_ids[x] for x in row] for row in board])
 		self.state['prev_board'] = copy(self.state['board'])
-
-		# current move
-		self.state['on_move'] = 1
-
 		return self.state
 
 		# TODO
@@ -293,6 +296,30 @@ class ChessEnv(gym.Env):
 		if mode != 'human':
 			return outfile
 
+	@staticmethod
+	def encode_current_state(state, saved_states):
+		board = state['board']
+		kr_moves = state['kr_moves']
+		castle_p1 = int(sum([k for k in kr_moves if k in [1,5,8]]) == 0)
+		castle_p2 = int(sum([k for k in kr_moves if k in [-1,-5,-8]]) == 0)
+		new_saved_states = copy(saved_states)
+		pieces_encoding = { '.': 0, 'p': 1, 'b': 2, 'n': 3, 'r': 4, 'k': 5, 'q': 6 }
+		encoding = str(castle_p1) + str(castle_p2)
+		for i in range(8):
+			for j in range(8):
+				piece_id = board[i][j]
+				player = sign(piece_id)
+				piece_type = ChessEnv.ids_to_pieces[piece_id][0].lower()
+				piece_encode = pieces_encoding[piece_type]
+				if piece_encode != 0:
+					piece_encode += 3*(1-player)
+				# hex encoding
+				encoding += hex(piece_encode)[2:]
+		if encoding in new_saved_states:
+			new_saved_states[encoding] += 1
+		else:
+			new_saved_states[encoding] = 1
+		return new_saved_states
 
 	@staticmethod
 	def resign_action():
@@ -300,6 +327,10 @@ class ChessEnv(gym.Env):
 	@staticmethod
 	def has_resigned(action):
 		return action == ChessEnv.resign_action()
+
+	@staticmethod
+	def is_a_draw(state):
+		return (state.repetitions >= 3)
 
 	@staticmethod
 	def offer_draw_action():
@@ -388,12 +419,17 @@ class ChessEnv(gym.Env):
 
 		# check for castle
 		# TODO
-		if piece_id == ChessEnv.CASTLE_MOVE_ID:
+		if piece_id == player * ChessEnv.CASTLE_MOVE_ID:
 			return ChessEnv.castle_action_to_state(
 						state, player, move['castle']), 0, 0
 
 		# find old position 
-		old_pos = np.array([x[0] for x in np.where(board == piece_id)])
+		try:
+			old_pos = np.array([x[0] for x in np.where(board == piece_id)])
+		except:
+			print('piece_id', piece_id)
+			print(board)
+			raise Exception()
 		r, c = old_pos[0], old_pos[1]
 		board[r, c] = 0
 
@@ -802,6 +838,8 @@ class ChessEnv(gym.Env):
 
 						if piece_type_before == 'p' and piece_type_after == 'p':
 							print('='*40, 'En passant move detected !!!')
+							# print(prev_board)
+							# print(board)
 							go_to.append(m)
 							# ChessEnv.render_moves(state, board[pos[0], pos[1]], moves, mode=)
 			return go_to

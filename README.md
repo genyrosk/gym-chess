@@ -104,4 +104,4 @@ attacking_moves = env.get_possible_moves(state, player, attack=True)
 
 ## TODO
 
-- threefold repetition
+- return draw action on 3fold repetition
