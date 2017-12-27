@@ -1,5 +1,109 @@
 # gym-chess
 
+A simple chess environment for gym. It computes all available moves, including castling, *en-passant*, pawn promotions and 3-fold repetition draws. 
+
+<table style="text-align:center;border-spacing:0pt;font-family:'Arial Unicode MS'; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 0pt 0pt">
+<tr>
+<td style="width:12pt">8</td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 1pt 0pt 0pt 1pt"><span style="font-size:150%;">♜</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 1pt 0pt 0pt 0pt" bgcolor="silver"><span style="font-size:150%;">♞</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 1pt 0pt 0pt 0pt"><span style="font-size:150%;">♝</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 1pt 0pt 0pt 0pt" bgcolor="silver"><span style="font-size:150%;">♛</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 1pt 0pt 0pt 0pt"><span style="font-size:150%;">♚</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 1pt 0pt 0pt 0pt" bgcolor="silver"><span style="font-size:150%;">♝</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 1pt 0pt 0pt 0pt"><span style="font-size:150%;">♞</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 1pt 1pt 0pt 0pt" bgcolor="silver"><span style="font-size:150%;">♜</span></td>
+</tr>
+<tr>
+<td style="width:12pt">7</td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 0pt 1pt" bgcolor="silver"><span style="font-size:150%;">♟</span></td>
+<td style="width:24pt; height:24pt;"><span style="font-size:150%;">♟</span></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"><span style="font-size:150%;">♟</span></td>
+<td style="width:24pt; height:24pt;"><span style="font-size:150%;">♟</span></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"><span style="font-size:150%;">♟</span></td>
+<td style="width:24pt; height:24pt;"><span style="font-size:150%;">♟</span></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"><span style="font-size:150%;">♟</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 1pt 0pt 0pt"><span style="font-size:150%;">♟</span></td>
+</tr>
+<tr>
+<td style="width:12pt">6</td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 0pt 1pt"><span style="font-size:150%;"><br /></span></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 1pt 0pt 0pt" bgcolor="silver"></td>
+</tr>
+<tr>
+<td style="width:12pt">5</td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 0pt 1pt" bgcolor="silver"><span style="font-size:150%;"><br /></span></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 1pt 0pt 0pt"></td>
+</tr>
+<tr>
+<td style="width:12pt">4</td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 0pt 1pt"><span style="font-size:150%;"><br /></span></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 1pt 0pt 0pt" bgcolor="silver"></td>
+</tr>
+<tr>
+<td style="width:12pt">3</td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 0pt 1pt" bgcolor="silver"><span style="font-size:150%;"><br /></span></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt;"></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 1pt 0pt 0pt"></td>
+</tr>
+<tr>
+<td style="width:12pt">2</td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 0pt 1pt"><span style="font-size:150%;">♙</span></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"><span style="font-size:150%;">♙</span></td>
+<td style="width:24pt; height:24pt;"><span style="font-size:150%;">♙</span></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"><span style="font-size:150%;">♙</span></td>
+<td style="width:24pt; height:24pt;"><span style="font-size:150%;">♙</span></td>
+<td style="width:24pt; height:24pt;" bgcolor="silver"><span style="font-size:150%;">♙</span></td>
+<td style="width:24pt; height:24pt;"><span style="font-size:150%;">♙</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 1pt 0pt 0pt" bgcolor="silver"><span style="font-size:150%;">♙</span></td>
+</tr>
+<tr>
+<td style="width:12pt">1</td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 1pt 1pt" bgcolor="silver"><span style="font-size:150%;">♖</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 1pt 0pt"><span style="font-size:150%;">♘</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 1pt 0pt" bgcolor="silver"><span style="font-size:150%;">♗</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 1pt 0pt"><span style="font-size:150%;">♕</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 1pt 0pt" bgcolor="silver"><span style="font-size:150%;">♔</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 1pt 0pt"><span style="font-size:150%;">♗</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 1pt 0pt" bgcolor="silver"><span style="font-size:150%;">♘</span></td>
+<td style="width:24pt; height:24pt; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 1pt 1pt 0pt"><span style="font-size:150%;">♖</span></td>
+</tr>
+<tr>
+<td></td>
+<td>a</td>
+<td>b</td>
+<td>c</td>
+<td>d</td>
+<td>e</td>
+<td>f</td>
+<td>g</td>
+<td>h</td>
+</tr>
+</table>
+
 ### Setup
 
 Install the environment:
@@ -101,7 +205,3 @@ You can also retrieve the list of squares that pieces are attacking and defendin
 attacking_moves = env.get_possible_moves(state, player, attack=True)
 
 ```
-
-## TODO
-
-- return draw action on 3fold repetition
