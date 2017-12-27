@@ -67,7 +67,7 @@ class ChessEnv(gym.Env):
 		
 		# One action (for each board position) x (no. of pieces), 2xcastles, offer/accept draw and resign
 		self.observation_space = spaces.Box(-16,16, (8,8)) # board 8x8
-		self.action_space = spaces.Discrete(64*16 + 6)
+		self.action_space = spaces.Discrete(64*16 + 4)
 
 		self.player = player_color # define player # TODO: implement
 		self.opponent = opponent # define opponent
@@ -323,7 +323,7 @@ class ChessEnv(gym.Env):
 
 	@staticmethod
 	def resign_action():
-		return 8**2 * 16 + 5
+		return 8**2 * 16 + 3
 	@staticmethod
 	def has_resigned(action):
 		return action == ChessEnv.resign_action()
@@ -332,19 +332,19 @@ class ChessEnv(gym.Env):
 	def is_a_draw(state):
 		return (state.repetitions >= 3)
 
-	@staticmethod
-	def offer_draw_action():
-		return 8**2 * 16 + 3
-	@staticmethod
-	def draw_offered(action, ):
-		return action == ChessEnv.offer_draw_action()
+	# @staticmethod
+	# def offer_draw_action():
+	# 	return 8**2 * 16 + 4
+	# @staticmethod
+	# def draw_offered(action, ):
+	# 	return action == ChessEnv.offer_draw_action()
 
-	@staticmethod
-	def accept_draw_action():
-		return 8**2 * 16 + 4
-	@staticmethod
-	def draw_accepted():
-		return action == ChessEnv.accept_draw_action()
+	# @staticmethod
+	# def accept_draw_action():
+	# 	return 8**2 * 16 + 5
+	# @staticmethod
+	# def draw_accepted():
+	# 	return action == ChessEnv.accept_draw_action()
 
 	@staticmethod
 	def castle_move_to_action(castle_type):
@@ -837,7 +837,7 @@ class ChessEnv(gym.Env):
 						piece_type_after = piece_after[0].lower()
 
 						if piece_type_before == 'p' and piece_type_after == 'p':
-							print('='*40, 'En passant move detected !!!')
+							# print('='*40, 'En passant move detected !!!')
 							# print(prev_board)
 							# print(board)
 							go_to.append(m)
