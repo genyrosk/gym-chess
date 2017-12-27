@@ -555,14 +555,7 @@ class ChessEnv(gym.Env):
 			def no_check_next_state(state, move, player):
 				next_state, __, __ = ChessEnv.next_state(state, move, player)
 				return not ChessEnv.king_is_checked(next_state, player)
-
-			saving_moves = list(filter(
-				lambda move: 
-				no_check_next_state(state, move, player), 
-				total_moves
-			))
-			# print('saving_moves', saving_moves)
-			return saving_moves
+			return [m for m in total_moves if no_check_next_state(state, m, player)]
 		else:
 			return total_moves
 
@@ -772,12 +765,9 @@ class ChessEnv(gym.Env):
 		step_2 = np.array([2, 0]) * player
 
 		if attack:
-			# filter out the position of own king
-			filter1 = lambda move: ChessEnv.pos_is_in_board(move)
-			filter2 = lambda move: not ChessEnv.is_own_king(board, move, player)
-
-			attack_moves = list(filter(filter1, attack_moves))
-			return list(filter(filter2, attack_moves))
+			return [m for m in attack_moves 
+				if ChessEnv.pos_is_in_board(m) 
+				and not ChessEnv.is_own_king(board, m, player)]
 
 		else:
 			# moves only to empty squares
