@@ -182,7 +182,7 @@ initial_state = env.reset()
 
 Visualise the current state of the chess game:
 
-```
+``` python
 
 env.render()
 
@@ -190,7 +190,7 @@ env.render()
 
 Show the moves that a piece can make given a set of moves (by any/all pieces on the board)
 
-```
+``` python
 
 # Player 1 moves
 piece = 6 # white queen
