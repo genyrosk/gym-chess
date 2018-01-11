@@ -10,8 +10,8 @@ env = gym.make('ChessVsRandomBot-v0')
 #
 # Play against random bot
 #
-num_episodes = 1
-num_steps_per_episode = 200
+num_episodes = 10
+num_steps_per_episode = 50
 
 collected_rewards = []
 
@@ -37,10 +37,12 @@ for i in range(num_episodes):
 			break
 
 		moves = env.get_possible_moves(state, player)
+		# moves = [m for m in moves if m['type'] == 'castling']
+		# print(moves)
 
 		if len(moves) == 0:
 			a = env.resign_action()
-			print('<'*5, '@'*10, 'PLAYER RESIGNED', '@'*10, '>'*5)
+			print('@'*15, 'PLAYER RESIGNED', '@'*15)
 		else:
 			m = random.choice(moves)
 			a = env.move_to_actions(m)
