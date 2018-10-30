@@ -1,4 +1,4 @@
-from chess import ChessEnv
+from gym_chess.chess import ChessEnv
 from gym.envs.registration import register
 
 register(
