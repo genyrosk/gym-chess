@@ -1,3 +1,5 @@
+from envs import *
+from test import *
 from gym.envs.registration import register
 
 register(
