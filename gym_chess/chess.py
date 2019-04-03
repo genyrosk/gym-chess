@@ -183,7 +183,7 @@ class ChessEnv(gym.Env):
 		###Render
 		if render: 
 			ChessEnv.render_moves(state, move['piece_id'], [move], mode='human')
-			pprint(' '*10, '>'*10, render_msg)
+			print(' '*10, '>'*10, render_msg)
 			# self._render()
 		return new_state, reward, False
 
@@ -247,7 +247,7 @@ class ChessEnv(gym.Env):
 			outfile.write(' {} | '.format(i+1))
 			for j in range(7,-1,-1):
 				piece = ChessEnv.ids_to_pieces[board[i,j]]
-				figure = uniDict[piece[0]]
+				figure = uniDict[piece[0]].encode("utf-8")
 				outfile.write(' {} '.format(figure))
 			outfile.write('|\n')
 		outfile.write('    ')
@@ -277,7 +277,7 @@ class ChessEnv(gym.Env):
 			outfile.write(' {} | '.format(i+1))
 			for j in range(7,-1,-1):
 				piece = ChessEnv.ids_to_pieces[board[i,j]]
-				figure = uniDict[piece[0]]
+				figure = uniDict[piece[0]].encode("utf-8")
 
 				# check moves + piece
 				if board[i,j] == piece_id:
@@ -432,8 +432,8 @@ class ChessEnv(gym.Env):
 		try:
 			old_pos = np.array([x[0] for x in np.where(board == piece_id)])
 		except:
-			pprint('piece_id', piece_id)
-			pprint(board)
+			print('piece_id', piece_id)
+			print(board)
 			raise Exception()
 		r, c = old_pos[0], old_pos[1]
 		board[r, c] = 0
@@ -453,11 +453,11 @@ class ChessEnv(gym.Env):
 			if (player == 1 and new_pos[0] == 7):
 				ChessEnv.ids_to_pieces[piece_id] = 'Q'
 				reward += 10
-				# pprint(' '*40, '!! ==> Player', player, 'pawn became a Queen <== !!', end='')
+				# print(' '*40, '!! ==> Player', player, 'pawn became a Queen <== !!', end='')
 			elif (player == -1 and new_pos[0] == 0):
 				ChessEnv.ids_to_pieces[piece_id] = 'q'
 				reward += 10
-				# pprint(' '*40, '!! ==> Player', player, 'pawn became a Queen <== !!', end='')
+				# print(' '*40, '!! ==> Player', player, 'pawn became a Queen <== !!', end='')
 
 		new_state['board'] = board
 		return new_state, prev_piece, reward
@@ -558,13 +558,13 @@ class ChessEnv(gym.Env):
 								'castle': k
 							})
 
-				# pprint('===============> We got some castling moves !!!')
-				# pprint('player', player)
-				# pprint(castle_moves)
+				# print('===============> We got some castling moves !!!')
+				# print('player', player)
+				# print(castle_moves)
 
 		# Check if the king is checked
 		if not attack and ChessEnv.king_is_checked(state, player):
-			# pprint('\n!! ==> Player ', player,' king is checked <== !!')
+			# print('\n!! ==> Player ', player,' king is checked <== !!')
 			def no_check_next_state(state, move, player):
 				next_state, __, __ = ChessEnv.next_state(state, move, player)
 				return not ChessEnv.king_is_checked(next_state, player)
@@ -606,7 +606,7 @@ class ChessEnv(gym.Env):
 		kr_moves = state['kr_moves']
 		go_to = {}
 
-		# pprint(kr_moves[5*player], kr_moves[1*player], kr_moves[8*player])
+		# print(kr_moves[5*player], kr_moves[1*player], kr_moves[8*player])
 
 		if kr_moves[5*player] != 0:
 			return {}
@@ -839,9 +839,9 @@ class ChessEnv(gym.Env):
 						piece_type_after = piece_after[0].lower()
 
 						if piece_type_before == 'p' and piece_type_after == 'p':
-							# pprint('='*40, 'En passant move detected !!!')
-							# pprint(prev_board)
-							# pprint(board)
+							# print('='*40, 'En passant move detected !!!')
+							# print(prev_board)
+							# print(board)
 							go_to.append(m)
 							# ChessEnv.render_moves(state, board[pos[0], pos[1]], moves, mode=)
 			return go_to
