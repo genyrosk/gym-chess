@@ -110,7 +110,7 @@ Install the environment:
 
 ``` python
 
-pip install -e .  
+pip3 install git+<URL_FOR_THIS_REPO>  
 
 ```
 
