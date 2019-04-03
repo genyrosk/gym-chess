@@ -247,7 +247,7 @@ class ChessEnv(gym.Env):
 			outfile.write(' {} | '.format(i+1))
 			for j in range(7,-1,-1):
 				piece = ChessEnv.ids_to_pieces[board[i,j]]
-				figure = uniDict[piece[0]].encode("utf-8")
+				figure = uniDict[piece[0]]
 				outfile.write(' {} '.format(figure))
 			outfile.write('|\n')
 		outfile.write('    ')
@@ -277,7 +277,7 @@ class ChessEnv(gym.Env):
 			outfile.write(' {} | '.format(i+1))
 			for j in range(7,-1,-1):
 				piece = ChessEnv.ids_to_pieces[board[i,j]]
-				figure = uniDict[piece[0]].encode("utf-8")
+				figure = uniDict[piece[0]]
 
 				# check moves + piece
 				if board[i,j] == piece_id:
