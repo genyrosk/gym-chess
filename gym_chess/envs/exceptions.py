@@ -1,0 +1,3 @@
+
+class IllegalMove(Exception):
+    pass
