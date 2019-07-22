@@ -2,14 +2,15 @@ import os
 import sys
 # import time
 
+import numpy as np
 from copy import copy
 from six import StringIO
 from pprint import pprint
+from itertools import chain
 
 # import gym
 # from gym import spaces, error, utils
 # from gym.utils import seeding
-import numpy as np
 
 class ChessColor:
     def __init__(self, color):
@@ -81,7 +82,15 @@ DOWN_DOWN_RIGHT = Move([-2,1])
 DOWN_RIGHT_RIGHT = Move([-1,2])
 
 
-class ChessPiece:
+class ChessPieceMeta(type):
+    def __call__(cls, *args, **kwargs):
+        class_object = type.__call__(cls, *args, **kwargs)
+        if not hasattr(class_object, 'icons'):
+            raise NotImplementedError(f'ChessPiece subclass {cls} requires '\
+                                      f'an `icons` attribute')
+        return class_object
+
+class ChessPiece(metaclass=ChessPieceMeta):
     def __init__(self, color, square):
         self.total_moves = 0
         self.color = color
@@ -89,20 +98,18 @@ class ChessPiece:
         self.possible_moves = []
         self.squares_attacked = []
         self.history = []
+    def __repr__(self):
+        return self.__str__()
+    def __str__(self):
+        if self.color == WHITE:
+            return self.icons[0]
+        else:
+            return self.icons[1]
 
 class Pawn(ChessPiece):
     def __init__(self, color, square):
         super().__init__(color, square)
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        if self.color == WHITE:
-            return '♟'
-        else:
-            return '♙'
-
+        self.icons = ['♟', '♙']
     @property
     def moves(self):
         if self.color == WHITE:
@@ -115,7 +122,6 @@ class Pawn(ChessPiece):
                 return [DOWN, TWO_DOWN]
             else:
                 return [DOWN]
-
     @property
     def attacks(self):
         if self.color == WHITE:
@@ -125,25 +131,76 @@ class Pawn(ChessPiece):
 
 
 class Rook(ChessPiece):
-    def __init__(self):
+    def __init__(self, color, square):
+        self.can_castle = True
         self.has_castled = False
+        self.icons = ['♜', '♖']
+        super().__init__(color, square)
+    @property
+    def moves(self):
+        return [UP_ITER, DOWN_ITER, LEFT_ITER, RIGHT_ITER]
+    @property
+    def attacks(self):
+        return self.moves
+
 
 class Knight(ChessPiece):
     def __init__(self):
-        self.is_checked
+        self.icons = ['♞', '♘']
+        super().__init__(color, square)
+    @property
+    def moves(self):
+        return [
+            UP_UP_RIGHT, UP_RIGHT_RIGHT, UP_UP_LEFT, UP_LEFT_LEFT,
+            DOWN_DOWN_LEFT, DOWN_LEFT_LEFT, DOWN_DOWN_RIGHT, DOWN_RIGHT_RIGHT
+        ]
+    @property
+    def attacks(self):
+        return self.moves
+
 
 class Bishop(ChessPiece):
-    def __init__(self):
-        pass
+    def __init__(self, color, square):
+        self.icons = ['♝', '♗']
+        super().__init__(color, square)
+    @property
+    def moves(self):
+        return [UP_LEFT_ITER, UP_RIGHT_ITER, DOWN_LEFT_ITER, DOWN_RIGHT_ITER]
+    @property
+    def attacks(self):
+        return self.moves
+
 
 class Queen(ChessPiece):
-    def __init__(self):
-        pass
+    def __init__(self, color, square):
+        self.icons = ['♛', '♕']
+        super().__init__(color, square)
+    @property
+    def moves(self):
+        return [
+            UP_ITER, DOWN_ITER, LEFT_ITER, RIGHT_ITER,
+            UP_LEFT_ITER, UP_RIGHT_ITER, DOWN_LEFT_ITER, DOWN_RIGHT_ITER
+        ]
+    @property
+    def attacks(self):
+        return self.moves
+
 
 class King(ChessPiece):
-    def __init__(self):
+    def __init__(self, color, square):
         self.is_checked = False
         self.has_castled = False
+        self.icons = ['♚', '♔']
+        super().__init__(color, square)
+    @property
+    def moves(self):
+        return [
+            UP, DOWN, LEFT, RIGHT,
+            UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT
+        ]
+    @property
+    def attacks(self):
+        return self.moves
 
 class CastlingMove:
     pass
@@ -164,6 +221,8 @@ class Empty:
     def __str__(self):
         return '.'
 
+class SquareOutsideBoard(Exception):
+    pass
 
 class Square:
     LETTERS = list('abcdefgh')
@@ -172,18 +231,12 @@ class Square:
     def __init__(self, *args):
         if len(args) == 1:
             self._name = args[0]
+            self.name = self._name
         elif len(args) == 2:
             self._coords = (args[0], args[1])
+            self.coords = self._coords
         else:
             raise Exception('1 or 2 args pls')
-
-    @property
-    def coords(self):
-        try:
-            return self._coords
-        except AttributeError:
-            self._coords = self.name_to_coords(self.name)
-            return self._coords
 
     @classmethod
     def coords_to_name(cls, coords):
@@ -196,12 +249,20 @@ class Square:
             cls.LETTERS.index(name[0])
         ]
 
+    @property
+    def coords(self):
+        try:
+            return self._coords
+        except AttributeError:
+            self._coords = self.name_to_coords(self.name)
+            return self._coords
+
     @coords.setter
     def coords(self, value):
         if len(value) != 2:
             raise Exception('coordinates must be len() == 2 !')
         if value[0] not in list(range(8)) or value[1] not in list(range(8)):
-            raise Exception('coordinates must be 2 integers between 0 and 7')
+            raise SquareOutsideBoard('coordinates must be 2 integers between 0 and 7')
         self._coords = value
         self._name = self.coords_to_name(self._coords)
 
@@ -210,7 +271,8 @@ class Square:
         try:
             return self._name
         except AttributeError:
-            self._name = self.LETTERS[self._coords[0]] + self.NUMBERS[self._coords[0]]
+            # self._name = self.LETTERS[self._coords[0]] + self.NUMBERS[self._coords[0]]
+            self._name = self.coords_to_name(self._coords)
             return self._name
 
     @name.setter
@@ -221,21 +283,21 @@ class Square:
         self._coords = self.name_to_coords(self._name)
 
     def __add__(self, move):
-        if isinstance(move, list):
-            print('horrray !!')
-        print('current square', self.coords, '+ move', move)
+        assert isinstance(move, list)
+        print(f'---> evalute <square {self.coords}> + <move {move}>', end='')
         new_coords = [
             self.coords[0] + move[0],
             self.coords[1] + move[1],
         ]
-        print('new square ===>>>', new_coords)
+        print(' ====', new_coords)
         return Square(*new_coords)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return f'Square: {self.coords}, {self.name}'
+        return f'Square <{self.name}> {self.coords}'
+
 
 #
 # class ChessSquares(dict):
@@ -262,12 +324,13 @@ class Square:
 LETTERS = 'abcdefgh'
 NUMBERS = '12345678'
 
-from itertools import chain
 
 class ChessBoard:
     def __init__(self):
         self.board = [[Empty(Square(x+y)) for x in LETTERS] for y in NUMBERS]
-        self.board[1][1] = Pawn(WHITE, Square(0,1))
+        self.board[7][5] = Pawn(WHITE, Square(7,5))
+        self.board[6][5] = Pawn(BLACK, Square(6,5))
+        self.board[5][5] = Pawn(WHITE, Square(5,5))
 
     def pieces(self):
         return [piece for piece in chain(*self.board) if isinstance(piece, ChessPiece)]
@@ -280,11 +343,14 @@ class ChessBoard:
             all_moves = piece.moves
             for iter_move in all_moves:
                 for move in iter_move:
-                    print(move)
-                    print(type(move))
-                    print(curr_square + move)
+                    try:
+                        new_square = curr_square + move
+                        print('new_square:', new_square)
+                    except SquareOutsideBoard:
+                        print('illegal move', move)
 
-                    # try: except: SquareOutsideBoard => exit
+                    x, y = new_square.coords
+                    print(isinstance(self.board[x][y], Empty))
                     # EnemyPiecePresent or OwnPiecePresent => exit
                     # king under attack
             # attack moves
@@ -296,9 +362,14 @@ class ChessBoard:
 
     def __str__(self):
         s = ''
-        for row in self.board[::-1]:
+        for i, row in enumerate(self.board[::-1]):
+            s += NUMBERS[::-1][i]
+            s += ' | '
             s += ' | '.join([str(x) for x in row])
+            s += ' | '
             s += '\n'
+        s += '    ' + '   '.join(LETTERS)
+        s += '\n'
         return s
 
 
