@@ -15,11 +15,19 @@ from itertools import chain
 class ChessColor:
     def __init__(self, color):
         self.color = color
+        self.dual_map = {'BLACK':'WHITE', 'WHITE':'BLACK'}
+    def __repr__(self):
+        return self.__str__()
+    def __str__(self):
+        return f'<Color: {self.color}>'
     def __eq__(self, other):
         if self.color == other.color:
             return True
         else:
             return False
+    def __invert__(self):
+        return ChessColor(self.dual_map[self.color])
+
 class BlackColor(ChessColor):
     def __init__(self):
         super().__init__('BLACK')
@@ -29,6 +37,9 @@ class WhiteColor(ChessColor):
 
 BLACK = BlackColor()
 WHITE = WhiteColor()
+
+print(BLACK)
+print(~BLACK)
 
 class Move:
     def __init__(self, move_coords, iterable=False):
@@ -96,7 +107,7 @@ class ChessPiece(metaclass=ChessPieceMeta):
         self.color = color
         self.square = square
         self.possible_moves = []
-        self.squares_attacked = []
+        self.scope = []
         self.history = []
     def __repr__(self):
         return self.__str__()
@@ -221,8 +232,14 @@ class Empty:
     def __str__(self):
         return '.'
 
+
 class SquareOutsideBoard(Exception):
     pass
+class EnemyPiecePresent(Exception):
+    pass
+class OwnPiecePresent(Exception):
+    pass
+
 
 class Square:
     LETTERS = list('abcdefgh')
@@ -260,7 +277,7 @@ class Square:
     @coords.setter
     def coords(self, value):
         if len(value) != 2:
-            raise Exception('coordinates must be len() == 2 !')
+            raise ValueError('coordinates must be len() == 2 !')
         if value[0] not in list(range(8)) or value[1] not in list(range(8)):
             raise SquareOutsideBoard('coordinates must be 2 integers between 0 and 7')
         self._coords = value
@@ -278,7 +295,7 @@ class Square:
     @name.setter
     def name(self, value):
         if not isinstance(value, str):
-            raise Exception('name must be a string dammit !')
+            raise ValueError('name must be a string dammit !')
         self._name = value
         self._coords = self.name_to_coords(self._name)
 
@@ -327,35 +344,101 @@ NUMBERS = '12345678'
 
 class ChessBoard:
     def __init__(self):
+        self.turn = WHITE
+
         self.board = [[Empty(Square(x+y)) for x in LETTERS] for y in NUMBERS]
         self.board[7][5] = Pawn(WHITE, Square(7,5))
         self.board[6][5] = Pawn(BLACK, Square(6,5))
         self.board[5][5] = Pawn(WHITE, Square(5,5))
 
-    def pieces(self):
-        return [piece for piece in chain(*self.board) if isinstance(piece, ChessPiece)]
+        self.prev_board = copy(self.board)
+        self.next_board = copy(self.board)
 
-    def calculate_moves(self):
-        pieces = self.pieces()
+    def pieces(self, color=None):
+        pieces = [piece for piece in chain(*self.board) if isinstance(piece, ChessPiece)]
+        if color:
+            pieces = list(filter(lambda x: x.color == color, pieces))
+        return pieces
+
+    @staticmethod
+    def move_legality_status(self, board, piece, move):
+        try:
+            new_square = piece.square + move
+            print('new_square:', new_square)
+        except SquareOutsideBoard:
+            print('illegal move', move)
+            return 'Outside'
+
+        x, y = new_square.coords
+        target_piece = board[x][y]
+        if not isinstance(target_piece, Empty):
+            assert isinstance(target_piece, ChessPiece), 'square must be either Empty or ChessPiece'
+            if target_piece.color == player_color:
+                return 'OwnPiecePresent'
+            else:
+                raise 'EnemyPiecePresent'
+        else:
+            return 'Empty'
+
+    def calculate_moves(self, player_color, check_king_check=True):
+        pieces = self.pieces(color=player_color)
+        print(pieces)
+        possible_moves = []
+
         for piece in pieces:
-            color = piece.color
-            curr_square = piece.square
-            all_moves = piece.moves
-            for iter_move in all_moves:
-                for move in iter_move:
-                    try:
-                        new_square = curr_square + move
-                        print('new_square:', new_square)
-                    except SquareOutsideBoard:
-                        print('illegal move', move)
+            # color = piece.color
+            # curr_square = piece.square
+            # all_moves = piece.moves
+            diff = piece.moves != piece.attacks
 
-                    x, y = new_square.coords
-                    print(isinstance(self.board[x][y], Empty))
-                    # EnemyPiecePresent or OwnPiecePresent => exit
-                    # king under attack
+            for iter_move in piece.moves:
+                for move in iter_move:
+
+                    status = ChessBoard.move_legality_status(board, piece, move)
+                    if status == 'Outside':
+                        legal = False
+                    elif status == 'OwnPiecePresent':
+                        legal = not diff
+                    elif status == 'EnemyPiecePresent':
+                        legal = False
+                    elif status == 'Empty':
+                        legal = bool(diff)
+
+                    if legal:
+                        if check_king_check:
+                            pass
+                            # king under attack
+                            # ...
+                        else:
+                            possible_moves.append(move)
+                    
+
+            if diff:
+                for iter_move in piece.attacks:
+                    for move in iter_move:
+                        status = ChessBoard.move_legality_status(board, piece, move)
+                        if check_king_check:
+                            pass
+                            # king under attack
+                            # ...
+                        else:
+                            possible_moves.append(move)
+
             # attack moves
             # -> same stuff except save one extra move on EnemyPiecePresent exception
         return []
+
+    @staticmethod
+    def simulate_move(board, move):
+        """
+            move = {
+                from: (x,y),
+                to: (x,y),
+                piece: ChessPiece,
+                move_type: 'attack', 'normal', 'king_check'
+            }
+        """
+        pass
 
     def __repr__(self):
         return self.__str__()
@@ -377,7 +460,13 @@ class ChessBoard:
 chessboard = ChessBoard()
 print(chessboard)
 print(chessboard.pieces())
-print(chessboard.calculate_moves())
+print(chessboard.calculate_moves(WHITE))
+
+p1 = Pawn(WHITE, Square(5,5))
+p2 = Rook(WHITE, Square(4,4))
+print(p1.moves == p1.attacks)
+print(p2.moves == p2.attacks)
+
 # for row in chessboard.board:
 #     for x in row:
 #         print(x.square)
