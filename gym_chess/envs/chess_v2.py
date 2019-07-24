@@ -7,6 +7,7 @@ from copy import copy
 from six import StringIO
 from pprint import pprint
 from itertools import chain
+from collections import namedtuple
 
 # import gym
 # from gym import spaces, error, utils
@@ -38,8 +39,9 @@ class WhiteColor(ChessColor):
 BLACK = BlackColor()
 WHITE = WhiteColor()
 
-print(BLACK)
-print(~BLACK)
+# TEST:
+# print(BLACK)
+# print(~BLACK)
 
 class Move:
     def __init__(self, move_coords, iterable=False):
@@ -239,6 +241,8 @@ class EnemyPiecePresent(Exception):
     pass
 class OwnPiecePresent(Exception):
     pass
+class KingCheck(Exception):
+    pass
 
 
 class Square:
@@ -306,7 +310,7 @@ class Square:
             self.coords[0] + move[0],
             self.coords[1] + move[1],
         ]
-        print(' ====', new_coords)
+        print(' ==>>', new_coords)
         return Square(*new_coords)
 
     def __repr__(self):
@@ -315,6 +319,18 @@ class Square:
     def __str__(self):
         return f'Square <{self.name}> {self.coords}'
 
+
+class PlayerMove(namedtuple('PlayerMove',
+                ['player', 'from_', 'to_', 'piece', 'move_type'])):
+    def __repr__(self):
+        return self.__str__()
+    def __str__(self):
+        return f'{self.piece} {self.from_.name}->{self.to_.name}, {self.move_type}'
+
+# TEST
+# p = PlayerMove(BLACK, (1,1), (0,0), 9, 'asd')
+# print(p)
+# sys.exit()
 
 #
 # class ChessSquares(dict):
@@ -342,107 +358,37 @@ LETTERS = 'abcdefgh'
 NUMBERS = '12345678'
 
 
-class ChessBoard:
+class Board:
+    LETTERS = 'abcdefgh'
+    NUMBERS = '12345678'
+
     def __init__(self):
-        self.turn = WHITE
+        self.board = [[Empty(Square(x+y)) for x in self.LETTERS] for y in self.NUMBERS]
+        self.max = 64
 
-        self.board = [[Empty(Square(x+y)) for x in LETTERS] for y in NUMBERS]
-        self.board[7][5] = Pawn(WHITE, Square(7,5))
-        self.board[6][5] = Pawn(BLACK, Square(6,5))
-        self.board[5][5] = Pawn(WHITE, Square(5,5))
+    def __getitem__(self, args):
+        assert isinstance(args, tuple) and len(args) == 2, 'must pass 2 dimensional tuple'
+        return  self.board[args[0]][args[1]]
 
-        self.prev_board = copy(self.board)
-        self.next_board = copy(self.board)
+    def __setitem__(self, args, value):
+        assert isinstance(args, tuple) and len(args) == 2, 'must pass 2 dimensional tuple'
+        self.board[args[0]][args[1]] = value
 
-    def pieces(self, color=None):
-        pieces = [piece for piece in chain(*self.board) if isinstance(piece, ChessPiece)]
-        if color:
-            pieces = list(filter(lambda x: x.color == color, pieces))
-        return pieces
+    def __iter__(self):
+        self.n = 0
+        return self
 
-    @staticmethod
-    def move_legality_status(self, board, piece, move):
-        try:
-            new_square = piece.square + move
-            print('new_square:', new_square)
-        except SquareOutsideBoard:
-            print('illegal move', move)
-            return 'Outside'
-
-        x, y = new_square.coords
-        target_piece = board[x][y]
-        if not isinstance(target_piece, Empty):
-            assert isinstance(target_piece, ChessPiece), 'square must be either Empty or ChessPiece'
-            if target_piece.color == player_color:
-                return 'OwnPiecePresent'
-            else:
-                raise 'EnemyPiecePresent'
+    def __next__(self):
+        if self.n < self.max:
+            x = self.n // 8
+            y = self.n % 8
+            self.n += 1
+            return self[x,y]
         else:
-            return 'Empty'
-
-    def calculate_moves(self, player_color, check_king_check=True):
-        pieces = self.pieces(color=player_color)
-        print(pieces)
-        possible_moves = []
-
-        for piece in pieces:
-            # color = piece.color
-            # curr_square = piece.square
-            # all_moves = piece.moves
-            diff = piece.moves != piece.attacks
-
-            for iter_move in piece.moves:
-                for move in iter_move:
-
-                    status = ChessBoard.move_legality_status(board, piece, move)
-                    if status == 'Outside':
-                        legal = False
-                    elif status == 'OwnPiecePresent':
-                        legal = not diff
-                    elif status == 'EnemyPiecePresent':
-                        legal = False
-                    elif status == 'Empty':
-                        legal = bool(diff)
-
-                    if legal:
-                        if check_king_check:
-                            pass
-                            # king under attack
-                            # ...
-                        else:
-                            possible_moves.append(move)
-                    
-
-            if diff:
-                for iter_move in piece.attacks:
-                    for move in iter_move:
-                        status = ChessBoard.move_legality_status(board, piece, move)
-                        if check_king_check:
-                            pass
-                            # king under attack
-                            # ...
-                        else:
-                            possible_moves.append(move)
-
-            # attack moves
-            # -> same stuff except save one extra move on EnemyPiecePresent exception
-        return []
-
-    @staticmethod
-    def simulate_move(board, move):
-        """
-            move = {
-                from: (x,y),
-                to: (x,y),
-                piece: ChessPiece,
-                move_type: 'attack', 'normal', 'king_check'
-            }
-        """
-        pass
+            raise StopIteration
 
     def __repr__(self):
         return self.__str__()
-
     def __str__(self):
         s = ''
         for i, row in enumerate(self.board[::-1]):
@@ -457,10 +403,203 @@ class ChessBoard:
 
 
 
+# TEST
+# b = Board()
+# t = (1,2)
+# s = b[t]
+# print(s)
+# s = b[1,2]
+# print(s)
+# b[1,2] = Pawn(WHITE, Square(1,2))
+# print(b)
+# pieces = [piece for piece in b if isinstance(piece, ChessPiece)]
+# print(pieces)
+# sys.exit()
+
+class ChessBoard:
+    def __init__(self):
+        self.turn = WHITE
+
+        self.board = Board()
+        self.board[7,5] = Pawn(WHITE, Square(7,5))
+        self.board[6,5] = Pawn(BLACK, Square(6,5))
+        self.board[3,3] = Pawn(WHITE, Square(3,3))
+
+        self.prev_board = copy(self.board)
+        self.next_board = copy(self.board)
+
+    def pieces(self, color=None):
+        return ChessBoard._pieces(self.board, color=color)
+
+    @staticmethod
+    def _pieces(board, color=None):
+        pieces = [piece for piece in board if isinstance(piece, ChessPiece)]
+        print(board)
+        print('..originally -->', pieces)
+        if color:
+            pieces = [x for x in pieces if x.color == color]
+        return pieces
+
+    @staticmethod
+    def move_status(board, piece, move):
+        try:
+            new_square = piece.square + move
+            print('new_square:', new_square)
+            x, y = new_square.coords
+            target_piece = board[x,y]
+
+            if not isinstance(target_piece, Empty):
+                assert isinstance(target_piece, ChessPiece), 'square must be either Empty or ChessPiece'
+                if target_piece.color == piece.color:
+                    return 'OwnPiece'
+                elif isinstance(target_piece, King) and target_piece.color != player_color:
+                    return 'EnemyKing'
+                else:
+                    return 'EnemyPiece'
+            else:
+                return 'Empty'
+
+        except SquareOutsideBoard:
+            print('illegal move', move)
+            return 'Outside'
+
+    def get_possible_moves(self, player_color, attack_mode=False):
+        # player_color = self.turn
+        return ChessBoard._get_possible_moves(copy(self.board), player_color, attack_mode=False)
+
+    @staticmethod
+    def _get_possible_moves(board, player_color, attack_mode=False):
+        pieces = ChessBoard._pieces(board, color=player_color)
+        print('... pieces ->', pieces)
+        possible_moves = []
+
+        for piece in pieces:
+            # color = piece.color
+            # curr_square = piece.square
+            # all_moves = piece.moves
+            is_pawn = piece.moves != piece.attacks
+            is_pawn_2 = isinstance(piece, Pawn)
+            assert is_pawn == is_pawn_2, 'WTF'
+
+            for iter_move in piece.moves:
+                for move in iter_move:
+                    enemy_king_check = False
+                    status = ChessBoard.move_status(board, piece, move)
+
+                    if status in ['Outside' ,'OwnPiece']:
+                        legal = False
+
+                    elif status == 'EnemyPiece':
+                        legal = bool(not is_pawn) # pawns can't capture on a `move`
+                        move_type = 'attack'
+
+                    elif status == 'EnemyKing':
+                        legal = False
+                        move_type = 'king_check'
+                        if attack_mode and not is_pawn:
+                            raise KingCheck()
+
+                    elif status == 'Empty':
+                        legal = not bool(is_pawn and attack_mode)
+                        move_type = 'normal'
+
+                    # => move is legal
+                    if legal:
+                        move_obj = PlayerMove(
+                            player_color,
+                            piece.square,
+                            piece.square + move,
+                            piece,
+                            move_type
+                        )
+                        print(move_obj)
+                        if not attack_mode:
+                            next_board = ChessBoard.simulate_move(copy(board), move_obj)
+                            print('back in time =============')
+                            print(board)
+                            try:
+                                _ = ChessBoard.get_possible_moves(next_board, player_color, attack_mode=False)
+                                possible_moves.append(move_obj)
+                            except KingCheck:
+                                pass
+                        else:
+                            possible_moves.append(move_obj)
+
+            # calculate attack moves for pawn separetly
+            if is_pawn:
+                for iter_move in piece.attacks:
+                    for move in iter_move:
+                        status = ChessBoard.move_status(board, piece, move)
+                        if status in ['Outside' ,'OwnPiece', 'Empty']:
+                            legal = False
+
+                        elif status == 'EnemyPiece':
+                            legal = True
+                            move_type = 'attack'
+
+                        elif status == 'EnemyKing':
+                            legal = False
+                            move_type = 'king_check'
+                            if attack_mode:
+                                raise KingCheck()
+
+                        # => move is legal
+                        if legal:
+                            move_obj = PlayerMove(
+                                player_color,
+                                piece.square,
+                                piece.square + move,
+                                piece,
+                                move_type
+                            )
+                            if not attack_mode:
+                                next_board = ChessBoard.simulate_move(copy(board), move_obj)
+                                print('back in time =============')
+                                print(board)
+                                try:
+                                    _ = ChessBoard.get_possible_moves(next_board, player_color, attack_mode=False)
+                                    possible_moves.append(move_obj)
+                                except KingCheck:
+                                    pass
+                            else:
+                                possible_moves.append(move_obj)
+        # DONE
+        return possible_moves
+
+    @staticmethod
+    def simulate_move(board, move):
+        """
+            move = (
+                player: player_color,
+                from: Square(x,y),
+                to: Square(x,y),
+                piece: ChessPiece,
+                move_type: 'attack' || 'normal' || 'king_check'
+            )
+        """
+        print('... --? simulation')
+        _from = move.from_.coords
+        _to   = move.to_.coords
+        piece = copy(move.piece)
+        piece.square = Square(*_to)
+        # change board
+        board[_from] = Empty(_from)
+        board[_to] = piece
+        print(board)
+        return board
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return self.board.__str__()
+
+
+
 chessboard = ChessBoard()
 print(chessboard)
-print(chessboard.pieces())
-print(chessboard.calculate_moves(WHITE))
+print('pieces:', chessboard.pieces())
+print('possible moves:', chessboard.get_possible_moves(WHITE))
 
 p1 = Pawn(WHITE, Square(5,5))
 p2 = Rook(WHITE, Square(4,4))
