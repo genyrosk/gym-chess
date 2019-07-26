@@ -374,7 +374,7 @@ class Board:
     NUMBERS = '12345678'
 
     def __init__(self, state=None):
-        self.board = [[Empty() for x in self.LETTERS] for y in self.NUMBERS]
+        self.board = np.array([[Empty() for x in self.LETTERS] for y in self.NUMBERS])
         self.max = 64
         if state:
             for piece in state:
@@ -390,10 +390,22 @@ class Board:
         print(type(args))
         assert isinstance(args, tuple) and len(args) == 2, 'must pass 2 dimensional tuple'
         # if
+        if isinstance(row, slice):
+            row = list(range(row.start or 0, row.stop or -1, row.step or 1))
+        else:
+            row = [row]
+        if isinstance(col, slice):
+            col = list(range(col.start or 0, col.stop or -1, col.step or 1))
+        else:
+            col = [col]
+
+        for 
+
+
         row, col = args[0], args[1]
         if isinstance(row, int) and isinstance(col, int):
             piece.square = Square(row, col)
-            self.board[row][col] = piece
+            self.board[row,col] = piece
         else:
             if isinstance(row, slice):
                 row = list(range(row.start or 0, row.stop or -1, row.step or 1))
