@@ -378,52 +378,32 @@ class Board:
         self.max = 64
         if state:
             for piece in state:
-                self.__setitem__(piece.square.coords, piece)
+                print(piece, (piece.square.coords, piece.__class__(piece.color)))
+                self.__setitem__(piece.square.coords, piece.__class__(piece.color))
 
 
     def __getitem__(self, args):
         assert isinstance(args, tuple) and len(args) == 2, 'must pass 2 dimensional tuple'
         return  self.board[args[0]][args[1]]
 
-    def __setitem__(self, args, piece):
-        print(args)
-        print(type(args))
+    def __setitem__(self, args, value):
         assert isinstance(args, tuple) and len(args) == 2, 'must pass 2 dimensional tuple'
-        # if
-        if isinstance(row, slice):
-            row = list(range(row.start or 0, row.stop or -1, row.step or 1))
+        self.board[args] = value
+        rows, cols = args[0], args[1]
+        if isinstance(rows, slice):
+            rows = list(range(rows.start or 0, rows.stop or 8, rows.step or 1))
         else:
-            row = [row]
-        if isinstance(col, slice):
-            col = list(range(col.start or 0, col.stop or -1, col.step or 1))
+            rows = [rows]
+        if isinstance(cols, slice):
+            cols = list(range(cols.start or 0, cols.stop or 8, cols.step or 1))
         else:
-            col = [col]
-
-        for 
-
-
-        row, col = args[0], args[1]
-        if isinstance(row, int) and isinstance(col, int):
-            piece.square = Square(row, col)
-            self.board[row,col] = piece
-        else:
-            if isinstance(row, slice):
-                row = list(range(row.start or 0, row.stop or -1, row.step or 1))
-            else:
-                row = [row]
-            if isinstance(col, slice):
-                col = list(range(col.start or 0, col.stop or -1, col.step or 1))
-            else:
-                col = [col]
-
-            for i, r in enumerate(row):
-                for j, c in enumerate(col):
-                    print(r, c)
-                    piece.square = Square(r, c)
-                    self.board[r][c] = piece
-        print(row, col)
-        piece.square = Square(row, col)
-        self.board[row][col] = piece
+            cols = [cols]
+        for row in rows:
+            for col in cols:
+                print(self.board[row,col], '-->', row, col)
+                self.board[row,col].square = Square(row, col)
+                x = self.board[row,col]
+                print('payasada', x, (x.square.coords))
 
     def __eq__(self, other):
         if len(self.pieces) != len(other.pieces):
@@ -442,7 +422,9 @@ class Board:
             row = self.n // 8
             col = self.n % 8
             self.n += 1
-            return self[row, col]
+            x = self.__getitem__((row, col))
+            print('ONE TAP --> ', (row, col), x, (x.square.coords))
+            return x
         else:
             raise StopIteration
 
@@ -451,18 +433,21 @@ class Board:
     def __str__(self):
         s = ''
         for i, row in enumerate(self.board[::-1]):
-            s += NUMBERS[::-1][i]
+            s += self.NUMBERS[::-1][i]
             s += ' | '
             s += ' | '.join([str(x) for x in row])
             s += ' | '
             s += '\n'
-        s += '    ' + '   '.join(LETTERS)
+        s += '    ' + '   '.join(self.LETTERS)
         s += '\n'
         return s
 
     @property
     def pieces(self):
-        return [piece for piece in self.__iter__() if isinstance(piece, ChessPiece)]
+        p = [piece for piece in self.__iter__() if isinstance(piece, ChessPiece)]
+        for x in p:
+            print('Pieces --> ', x, (x.square.coords))
+        return p
 
     @property
     def state(self):
@@ -474,7 +459,7 @@ class Board:
 
 
 # TEST
-b = Board()
+# b = Board()
 # t = (1,2)
 # s = b[t]
 # print(s)
@@ -483,24 +468,28 @@ b = Board()
 # b[1,2] = Pawn(WHITE)
 # b[2,2] = Pawn(WHITE)
 
-b[2:4,4] = [Pawn(WHITE), Pawn(WHITE), Pawn(WHITE)]
-
-print(b)
-pieces = [piece for piece in b if isinstance(piece, ChessPiece)]
-print(pieces)
-state = b.state
-b2 = Board(state=state)
-print(b2)
-sys.exit()
+# b[2,1:4] = [Pawn(WHITE), Pawn(WHITE), Pawn(WHITE)]
+#
+# print(b)
+# pieces = [piece for piece in b if isinstance(piece, ChessPiece)]
+# print(pieces)
+# state = b.state
+# b2 = Board(state=state)
+# print(b2)
+# sys.exit()
 
 class ChessBoard:
     def __init__(self):
         self.turn = WHITE
 
         self.board = Board()
-        self.board[5,5] = Pawn(WHITE)
-        self.board[3,3] = Pawn(WHITE)
-        self.board[6,6] = Pawn(BLACK)
+        self.board[0,:] = [Rook(WHITE), Knight(WHITE), Bishop(WHITE), Queen(WHITE),
+                            King(WHITE), Bishop(WHITE), Knight(WHITE), Rook(WHITE)]
+        self.board[1,:] = [Pawn(WHITE)]*8
+        self.board[6,:] = [Pawn(BLACK)]*8
+        self.board[7,:] = [Rook(BLACK), Knight(BLACK), Bishop(BLACK), Queen(BLACK),
+                            King(BLACK), Bishop(BLACK), Knight(BLACK), Rook(BLACK)]
+        print(self.board)
         self.prev_board = self.board.copy()
 
     def pieces(self, color=None):
@@ -513,7 +502,7 @@ class ChessBoard:
         print('...all      -->', pieces)
         if color:
             pieces = [x for x in pieces if x.color == color]
-        print('...filered  -->', pieces)
+        print('...filtered -->', pieces)
         return pieces
 
     @staticmethod
@@ -555,6 +544,7 @@ class ChessBoard:
         possible_moves = []
 
         for piece in pieces:
+            input()
             # color = piece.color
             # curr_square = piece.square
             # all_moves = piece.moves
@@ -562,7 +552,7 @@ class ChessBoard:
             is_pawn_2 = isinstance(piece, Pawn)
             assert is_pawn == is_pawn_2, 'WTF'
 
-            print(f'\t{piece} {piece.square}' )
+            print(f'==== {piece} {piece.square}' )
             for iter_move in piece.moves:
                 for move in iter_move:
                     print(f'\n\t >>> For {piece} {piece.square} analyse move {move}' )
@@ -583,7 +573,7 @@ class ChessBoard:
                             raise KingCheck()
 
                     elif status == 'Empty':
-                        legal = bool(is_pawn)
+                        legal = True
                         move_type = 'normal'
 
                     print(f'\t\t==>> <move {move}>, legal: {legal}, type: {move_type}')
@@ -600,6 +590,8 @@ class ChessBoard:
                         )
                         print('...attack_mode:', attack_mode)
                         print('...running simulation')
+                        next_board = board.copy()
+                        print(next_board)
                         next_board = ChessBoard.simulate_move(board.copy(), move_obj)
                         try:
                             print('...simulation => get possible moves')
@@ -670,18 +662,15 @@ class ChessBoard:
         _from = move.from_.coords
         _to   = move.to_.coords
 
-        new_board = copy(board)
-        new_board[_to]= Marked()
-        print(new_board)
+        board[_to]= Marked()
+        print(board)
 
-        piece = copy(move.piece)
-        piece.square = Square(*_to)
         # change board
-        new_board[_from] = Empty(_from)
-        new_board[_to] = piece
+        board[_from] = Empty(_from)
+        board[_to] = move.piece
         # print(f'/// TO >>>')
         # print(board)
-        return new_board
+        return board
 
     def __repr__(self):
         return self.__str__()
@@ -692,6 +681,7 @@ class ChessBoard:
 
 
 chessboard = ChessBoard()
+print(chessboard.board.pieces)
 # print(chessboard)
 # print('\n', separator*2)
 #
