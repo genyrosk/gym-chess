@@ -378,7 +378,6 @@ class Board:
         self.max = 64
         if state:
             for piece in state:
-                print(piece, (piece.square.coords, piece.__class__(piece.color)))
                 self.__setitem__(piece.square.coords, piece.__class__(piece.color))
 
 
@@ -400,10 +399,9 @@ class Board:
             cols = [cols]
         for row in rows:
             for col in cols:
-                print(self.board[row,col], '-->', row, col)
+                # print(self.board[row,col], '-->', row, col)
                 self.board[row,col].square = Square(row, col)
                 x = self.board[row,col]
-                print('payasada', x, (x.square.coords))
 
     def __eq__(self, other):
         if len(self.pieces) != len(other.pieces):
@@ -423,7 +421,6 @@ class Board:
             col = self.n % 8
             self.n += 1
             x = self.__getitem__((row, col))
-            print('ONE TAP --> ', (row, col), x, (x.square.coords))
             return x
         else:
             raise StopIteration
@@ -445,8 +442,6 @@ class Board:
     @property
     def pieces(self):
         p = [piece for piece in self.__iter__() if isinstance(piece, ChessPiece)]
-        for x in p:
-            print('Pieces --> ', x, (x.square.coords))
         return p
 
     @property
@@ -485,8 +480,8 @@ class ChessBoard:
         self.board = Board()
         self.board[0,:] = [Rook(WHITE), Knight(WHITE), Bishop(WHITE), Queen(WHITE),
                             King(WHITE), Bishop(WHITE), Knight(WHITE), Rook(WHITE)]
-        self.board[1,:] = [Pawn(WHITE)]*8
-        self.board[6,:] = [Pawn(BLACK)]*8
+        self.board[1,:] = [Pawn(WHITE) for _ in range(8)]
+        self.board[6,:] = [Pawn(BLACK) for _ in range(8)]
         self.board[7,:] = [Rook(BLACK), Knight(BLACK), Bishop(BLACK), Queen(BLACK),
                             King(BLACK), Bishop(BLACK), Knight(BLACK), Rook(BLACK)]
         print(self.board)
@@ -667,7 +662,7 @@ class ChessBoard:
 
         # change board
         board[_from] = Empty(_from)
-        board[_to] = move.piece
+        board[_to] = move.piece.__class__(move.piece.color)
         # print(f'/// TO >>>')
         # print(board)
         return board
