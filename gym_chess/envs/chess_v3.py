@@ -217,33 +217,14 @@ class Board:
         """
         _from = move.from_.coords
         _to   = move.to_.coords
-        # print(f'/// SIMULATION >>> {move}')
-        # print(f'/// FROM >>>')
-        # self[_to]= Marked()
-        # print(self)
+        print(f'/// SIMULATION >>> {move}')
+        print(f'/// FROM >>>')
+        self[_to]= Marked()
+        print(self)
         piece_copy = deepcopy(move.piece)
         piece_copy.makes_move()
         self[_from] = Empty(_from)
         self[_to] = deepcopy(piece_copy)
-
-    def move_status(self, piece, move):
-        try:
-            new_square = piece.square + move
-            x, y = new_square.coords
-            target_piece = self[x,y]
-            if not isinstance(target_piece, Empty):
-                assert isinstance(target_piece, ChessPiece), 'square must be either Empty or ChessPiece'
-                if target_piece.color == piece.color:
-                    return 'OwnPiece'
-                elif isinstance(target_piece, King) and target_piece.color != player_color:
-                    return 'EnemyKing'
-                else:
-                    return 'EnemyPiece'
-            else:
-                return 'Empty'
-        except SquareOutsideBoard:
-            print('illegal move', move)
-            return 'Outside'
 
     def get_possible_moves(self, player_color, attack_mode=False):
         if attack_mode:
@@ -256,34 +237,24 @@ class Board:
         possible_moves = []
 
         for piece in pieces:
-            break
             input()
-            is_pawn = piece.moves != piece.attacks
-            is_pawn_2 = isinstance(piece, Pawn)
-            assert is_pawn == is_pawn_2, 'WTF'
-
+            is_pawn = isinstance(piece, Pawn)
             print(f'==== {piece} {piece.square}' )
             for iter_move in piece.moves:
                 for move in iter_move:
+                    input()
                     print(f'\n\t >>> For {piece} {piece.square} analyse move {move}' )
-                    status = self.move_status(piece, move)
-
-                    if status in ['Outside' ,'OwnPiece']:
-                        legal = False
-                        move_type = None
-                    elif status == 'EnemyPiece':
-                        legal = bool(not is_pawn) # pawns can't capture on a `move`
-                        move_type = 'attack'
-                    elif status == 'EnemyKing':
-                        legal = False
-                        move_type = 'king_check'
-                        if attack_mode and not is_pawn:
+                    try:
+                        new_square = piece.square + move
+                        target_piece = self[new_square.coords]
+                        legal, move_type = piece.assess_move_to(target_piece)
+                    except KingCheck:
+                        if attack_mode:
                             raise KingCheck()
-                    elif status == 'Empty':
-                        legal = True
-                        move_type = 'normal'
-
+                    except SquareOutsideBoard:
+                        break
                     print(f'\t\t==>> <move {move}>, legal: {legal}, type: {move_type}')
+
                     # => move is legal
                     if legal and not attack_mode:
                         print('...move is legal')
@@ -293,7 +264,7 @@ class Board:
                         print('...running simulation')
                         next_board = deepcopy(self)
                         next_board.make_move(move_obj)
-                        print(next_board)
+                        # print(next_board)
                         try:
                             print('...simulation => get possible moves')
                             _ = next_board.get_possible_moves(~player_color, attack_mode=True)
@@ -301,35 +272,35 @@ class Board:
                             possible_moves += [move_obj]
                         except KingCheck:
                             pass
+                    else:
+                        break
 
             # calculate attack moves for pawn separetly
             if is_pawn:
                 for iter_move in piece.attacks:
                     for move in iter_move:
                         print(f'\n\t >>> For {piece} {piece.square} analyse move {move}' )
-
-                        status = self.move_status(piece, move)
-                        if status in ['Outside' ,'OwnPiece', 'Empty']:
-                            legal = False
-                            move_type = None
-                        elif status == 'EnemyPiece':
-                            legal = True
-                            move_type = 'attack'
-                        elif status == 'EnemyKing':
-                            legal = False
-                            move_type = 'king_check'
+                        try:
+                            new_square = piece.square + move
+                            target_piece = self[new_square.coords]
+                            legal, move_type = piece.assess_attack_on(target_piece)
+                        except KingCheck:
                             if attack_mode:
                                 raise KingCheck()
-
+                        except SquareOutsideBoard:
+                            break
                         print(f'\t\t==>> <move {move}>, legal: {legal}, type: {move_type}')
+
                         # => move is legal
                         if legal and not attack_mode:
+                            print('...move is legal')
                             move_obj = PlayerMove(player_color, piece.square,
                                                 piece.square + move, piece, move_type)
                             print('...attack_mode:', attack_mode)
                             print('...running simulation')
                             next_board = deepcopy(self)
                             next_board.make_move(move_obj)
+                            # print(next_board)
                             try:
                                 print('...simulation => get possible moves')
                                 _ = next_board.get_possible_moves(~player_color, attack_mode=True)
@@ -337,8 +308,11 @@ class Board:
                                 possible_moves += [move_obj]
                             except KingCheck:
                                 pass
-        if not attack_mode:
-            possible_moves += self.get_castling_moves(player_color)
+                        else:
+                            break
+
+        # if not attack_mode:
+        #     possible_moves += self.get_castling_moves(player_color)
         return possible_moves
 
     def get_castling_moves(self, player_color):
@@ -418,184 +392,21 @@ class ChessBoard:
     def __init__(self):
         self.turn = WHITE
         self.board = Board()
-        self.board[0,:] = [Rook(WHITE), Knight(WHITE), Bishop(WHITE), Queen(WHITE),
-                            King(WHITE), Empty(), Empty(), Rook(WHITE)]
-        self.board[1,:] = [Pawn(WHITE) for _ in range(8)]
-        self.board[6,:] = [Pawn(BLACK) for _ in range(8)]
-        self.board[7,:] = [Rook(BLACK), Knight(BLACK), Bishop(BLACK), Queen(BLACK),
-                            King(BLACK), Bishop(BLACK), Knight(BLACK), Rook(BLACK)]
+        # self.board[0,:] = [Rook(WHITE), Knight(WHITE), Bishop(WHITE), Queen(WHITE),
+        #                     King(WHITE), Empty(), Empty(), Rook(WHITE)]
+        # self.board[1,:] = [Pawn(WHITE) for _ in range(8)]
+        # self.board[6,:] = [Pawn(BLACK) for _ in range(8)]
+        # self.board[7,:] = [Rook(BLACK), Knight(BLACK), Bishop(BLACK), Queen(BLACK),
+        #                     King(BLACK), Bishop(BLACK), Knight(BLACK), Rook(BLACK)]
+        self.board[4,3] = Rook(WHITE)
         self.prev_board = deepcopy(self.board)
 
-    def get_possible_moves(self, player_color, attack_mode=False):
-        # player_color = self.turn
+    def get_possible_moves(self):
+        player_color = self.turn
         return self.board.get_possible_moves(player_color, attack_mode=False)
-        # return ChessBoard._get_possible_moves(self.board, player_color, attack_mode=False)
-
-    @staticmethod
-    def _get_possible_moves(board, player_color, attack_mode=False):
-        if attack_mode:
-            print('<<<<<<< SIMULATED >>>>>>>')
-        print(f'Compute moves for Player {player_color}:')
-        if not attack_mode:
-            print('')
-            print(board)
-        pieces = board.get_pieces(player_color)
-        possible_moves = []
-
-        for piece in pieces:
-            break
-            input()
-            is_pawn = piece.moves != piece.attacks
-            is_pawn_2 = isinstance(piece, Pawn)
-            assert is_pawn == is_pawn_2, 'WTF'
-
-            print(f'==== {piece} {piece.square}' )
-            for iter_move in piece.moves:
-                for move in iter_move:
-                    print(f'\n\t >>> For {piece} {piece.square} analyse move {move}' )
-                    status = board.move_status(piece, move)
-
-                    if status in ['Outside' ,'OwnPiece']:
-                        legal = False
-                        move_type = None
-                    elif status == 'EnemyPiece':
-                        legal = bool(not is_pawn) # pawns can't capture on a `move`
-                        move_type = 'attack'
-                    elif status == 'EnemyKing':
-                        legal = False
-                        move_type = 'king_check'
-                        if attack_mode and not is_pawn:
-                            raise KingCheck()
-                    elif status == 'Empty':
-                        legal = True
-                        move_type = 'normal'
-
-                    print(f'\t\t==>> <move {move}>, legal: {legal}, type: {move_type}')
-                    # => move is legal
-                    if legal and not attack_mode:
-                        print('...move is legal')
-                        move_obj = PlayerMove(player_color, piece.square,
-                                            piece.square + move, piece, move_type)
-                        print('...attack_mode:', attack_mode)
-                        print('...running simulation')
-                        next_board = deepcopy(board)
-                        print(next_board)
-                        # next_board = ChessBoard.simulate_move(deepcopy(board), move_obj)
-                        next_board = deepcopy(board)
-                        next_board.make_move(move_obj)
-                        try:
-                            print('...simulation => get possible moves')
-                            _ = ChessBoard._get_possible_moves(next_board, ~player_color, attack_mode=True)
-                            print('... NO King Check ====>>>> save move', move_obj)
-                            possible_moves += [move_obj]
-                        except KingCheck:
-                            pass
-
-            # calculate attack moves for pawn separetly
-            if is_pawn:
-                for iter_move in piece.attacks:
-                    for move in iter_move:
-                        print(f'\n\t >>> For {piece} {piece.square} analyse move {move}' )
-
-                        status = board.move_status(piece, move)
-                        if status in ['Outside' ,'OwnPiece', 'Empty']:
-                            legal = False
-                            move_type = None
-                        elif status == 'EnemyPiece':
-                            legal = True
-                            move_type = 'attack'
-                        elif status == 'EnemyKing':
-                            legal = False
-                            move_type = 'king_check'
-                            if attack_mode:
-                                raise KingCheck()
-
-                        print(f'\t\t==>> <move {move}>, legal: {legal}, type: {move_type}')
-                        # => move is legal
-                        if legal and not attack_mode:
-                            move_obj = PlayerMove(player_color, piece.square,
-                                                piece.square + move, piece, move_type)
-                            print('...attack_mode:', attack_mode)
-                            print('...running simulation')
-                            # next_board = ChessBoard.simulate_move(deepcopy(board), move_obj)
-                            next_board = deepcopy(board)
-                            next_board.make_move(move_obj)
-                            try:
-                                print('...simulation => get possible moves')
-                                _ = ChessBoard._get_possible_moves(next_board, ~player_color, attack_mode=True)
-                                print('... NO King Check ====>>>> save move', move_obj)
-                                possible_moves += [move_obj]
-                            except KingCheck:
-                                pass
-        # Castling:
-        # ---------
-        # rook is present
-        # rook hasn't moved and is on it's original square
-        # king hasn't moved and is on it's original square
-        # space in between is unoccupied
-        # king's isn't under check
-        # 2 squares left/right from king aren't under check
-        if not attack_mode:
-            rooks = [_ for _ in pieces if isinstance(_, Rook)]
-            king = [_ for _ in pieces if isinstance(_, King)][0]
-            print(rooks, king)
-            for rook in rooks:
-                print(rook, rook.square)
-                if rook.total_moves == king.total_moves == 0:
-                    # check if king/rook are on original squares ? (for starting
-                    # states which are different from default starting state)
-                    try:
-                        distance = rook.square.coords[1] - king.square.coords[1]
-                        print(distance)
-                        _sign = sign(distance)
-                        one_step = king.square + [0, _sign*1]
-                        two_step = king.square + [0, _sign*2]
-
-                        # is King checked ?
-                        print(board)
-                        _ = ChessBoard._get_possible_moves(board, ~player_color, attack_mode=True)
-                        # one step
-                        move_obj = PlayerMove(player_color, king.square, one_step, king, 'castling')
-                        next_board = deepcopy(board)
-                        next_board.make_move(move_obj)
-                        print(next_board)
-                        _ = ChessBoard._get_possible_moves(next_board, ~player_color, attack_mode=True)
-                        # two step
-                        move_obj = PlayerMove(player_color, king.square, two_step, king, 'castling')
-                        next_board = deepcopy(board)
-                        next_board.make_move(move_obj)
-                        print(next_board)
-                        _ = ChessBoard._get_possible_moves(next_board, ~player_color, attack_mode=True)
-
-                        # no KingCheck excpetion raised
-                        castle_type = {3: 'king', 4: 'queen'}[abs(distance)]
-                        castle_move = CASTLES[castle_type](player_color)
-                        possible_moves += [castle_move]
-                    except KingCheck:
-                        pass
-
-        return possible_moves
-
-    # @staticmethod
-    # def simulate_move(board, move):
-    #     """
-    #         Args:
-    #             move: <PlayerMove>
-    #     """
-    #     print(f'/// SIMULATION >>> {move}')
-    #     print(f'/// FROM >>>')
-    #     _from = move.from_.coords
-    #     _to   = move.to_.coords
-    #     board[_to]= Marked()
-    #     print(board)
-    #     # change board
-    #     board[_from] = Empty(_from)
-    #     board[_to] = move.piece.__class__(move.piece.color)
-    #     return board
 
     def __repr__(self):
         return self.__str__()
-
     def __str__(self):
         return self.board.__str__()
 
@@ -613,7 +424,7 @@ print(chessboard.board.pieces)
 print('\n', separator*2)
 
 print('\nTEST: Calculating ALL possible moves', end='\n'+'-'*35 + '\n')
-print('possible moves:', chessboard.get_possible_moves(WHITE))
+print('possible moves:', chessboard.get_possible_moves())
 print('\n', separator*2)
 
 

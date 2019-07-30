@@ -29,4 +29,7 @@ for attack in p.attacks:
 # - capturing a piece adds it to the "basket"
 # - assigning multiple pieces to a slice of the board
 # - deepcopy of the board is != from the original
-# 
+# - Pawn, Rook, Bishop, Knight, King, Queen moves
+# - move types: `capture`, `move`, `castling`, `king_check`
+#
+#

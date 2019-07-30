@@ -2,17 +2,19 @@ import os
 import sys
 
 cli_white = "93m"
-cli_black = "1;32;40m"
+cli_black = "92m"
 
 class ChessColor:
+    cli_colors = {'BLACK': cli_black, 'WHITE': cli_white}
+    dual_map = {'BLACK':'WHITE', 'WHITE':'BLACK'}
     def __init__(self, color, cli_color=None):
         self.color = color
-        self.cli_color = cli_color
-        self.dual_map = {'BLACK':'WHITE', 'WHITE':'BLACK'}
+        self.cli_color = self.cli_colors[color]
     def __repr__(self):
         return self.__str__()
     def __str__(self):
-        return f'<\033[{self.cli_color}{self.color}\033[0m>'
+        print(self.cli_color)
+        return f"<\033[{self.cli_color}{self.color}\033[0m>"
     def __eq__(self, other):
         if self.color == other.color:
             return True
@@ -144,14 +146,36 @@ class ChessPiece(metaclass=ChessPieceMeta):
         assert isinstance(target_square, ChessPiece), \
                     'square must be either Empty or ChessPiece'
         # own piece
-        if target_piece.color == self.color:
-            return False, None
+        if target_square.color == self.color:
+            return False, 'own_piece'
         # enemy king
         elif isinstance(target_square, King): # and target_piece.color != self.color:
-            raise KingCheck()
+            False, 'king_check'
         # enemy piece
         else:
             return True, 'capture'
+
+    def generate_moves(self, chessboard, attack_mode=False):
+        for iter_move in self.moves:
+            for move in iter_move:
+                input()
+                print(f'\n\t >>> For {self} {self.square} analyse move {move}' )
+                try:
+                    new_square = self.square + move
+                    target_piece = chessboard[new_square.coords]
+                    legal, move_type = self.assess_move_to(target_piece)
+                    print('assessment ==>', legal, move_type)
+                    if attack_mode and move_type == 'king_check':
+                        raise KingCheck()
+                    if legal:
+                        print('move is LEGAL => yield')
+                        yield move, move_type
+                        if move_type == 'capture':
+                            break
+                    else:
+                        break
+                except SquareOutsideBoard:
+                    break
 
 class Pawn(ChessPiece):
     def __init__(self, color):
@@ -187,11 +211,35 @@ class Pawn(ChessPiece):
         if (isinstance(target_square, ChessPiece) and
             target_piece.color != self.color):
             if isinstance(target_square, King):
-                raise KingCheck()
+                return False, 'king_check'
             else:
                 return True, 'capture'
         else:
             return False, None
+
+    def generate_moves(self, chessboard, attack_mode=False):
+        for move in super().generate_moves(chessboard, attack_mode):
+            yield move
+        for iter_move in self.attacks:
+            for move in iter_move:
+                input()
+                print(f'\n\t >>> For {self} {self.square} analyse move {move}' )
+                try:
+                    new_square = self.square + move
+                    target_piece = chessboard[new_square.coords]
+                    legal, move_type = self.assess_attack_on(target_piece)
+                    print('assessment ==>', legal, move_type)
+                    if attack_mode and move_type == 'king_check':
+                        raise KingCheck()
+                    if legal:
+                        print('move is LEGAL => yield')
+                        yield move, move_type
+                        if move_type == 'capture':
+                            break
+                    else:
+                        break
+                except SquareOutsideBoard:
+                    break
 
 
 class Rook(ChessPiece):
