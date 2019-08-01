@@ -1,5 +1,6 @@
 import os
 import sys
+from copy import deepcopy
 
 cli_white = "93m"
 cli_black = "92m"
@@ -116,18 +117,25 @@ class ChessPiece(metaclass=ChessPieceMeta):
         self.square = square
         self.possible_moves = []
         self.history = []
+        self.marked = False
+        self.attacked = False
         #
     def __repr__(self):
         return self.__str__()
     def __str__(self):
+        s1, s2 = ' ', ' '
+        if self.marked:
+            s1, s2 = '<', '>'
+        if self.attacked:
+            s1, s2 = '+', '+'
         if self.color == WHITE:
             if not os.getenv('CLI_COLOR', True):
-                return self.icons[0]
-            return f"\033[{cli_white}{self.icons[0]}\033[0m"
+                return f"{s1}{self.icons[0]}{s2}"
+            return f"\033[{cli_white}{s1}{self.icons[0]}{s2}\033[0m"
         else:
             if not os.getenv('CLI_COLOR', True):
-                return self.icons[1]
-            return f"\033[{cli_black}{self.icons[0]}\033[0m"
+                return f"{s1}{self.icons[1]}{s2}"
+            return f"\033[{cli_black}{s1}{self.icons[0]}{s2}\033[0m"
     @property
     def moves(self):
         return self.move_types
@@ -135,7 +143,21 @@ class ChessPiece(metaclass=ChessPieceMeta):
     def attacks(self):
         return self.moves
 
-    def makes_move(self):
+    def mark_attacked(self):
+        self_copy = deepcopy(self)
+        self_copy.attacked = True
+        return self_copy
+    def mark(self):
+        self_copy = deepcopy(self)
+        self_copy.marked = True
+        return self_copy
+    def unmark(self):
+        self_copy = deepcopy(self)
+        self_copy.marked = False
+        self_copy.attacked = False
+        return self_copy
+
+    def increment_move_counter(self):
         self.total_moves += 1
 
     def assess_move_to(self, target_square):
@@ -150,7 +172,7 @@ class ChessPiece(metaclass=ChessPieceMeta):
             return False, 'own_piece'
         # enemy king
         elif isinstance(target_square, King): # and target_piece.color != self.color:
-            False, 'king_check'
+            return False, 'king_check'
         # enemy piece
         else:
             return True, 'capture'
@@ -158,7 +180,7 @@ class ChessPiece(metaclass=ChessPieceMeta):
     def generate_moves(self, chessboard, attack_mode=False):
         for iter_move in self.moves:
             for move in iter_move:
-                input()
+                # input()
                 print(f'\n\t >>> For {self} {self.square} analyse move {move}' )
                 try:
                     new_square = self.square + move
@@ -209,7 +231,7 @@ class Pawn(ChessPiece):
 
     def assess_attack_on(self, target_square):
         if (isinstance(target_square, ChessPiece) and
-            target_piece.color != self.color):
+            target_square.color != self.color):
             if isinstance(target_square, King):
                 return False, 'king_check'
             else:
@@ -222,7 +244,7 @@ class Pawn(ChessPiece):
             yield move
         for iter_move in self.attacks:
             for move in iter_move:
-                input()
+                # input()
                 print(f'\n\t >>> For {self} {self.square} analyse move {move}' )
                 try:
                     new_square = self.square + move
@@ -298,6 +320,8 @@ class Empty:
         return self.__str__()
     def __str__(self):
         return '.'
+    def mark_attacked(self):
+        return Marked()
 
 
 class Marked:

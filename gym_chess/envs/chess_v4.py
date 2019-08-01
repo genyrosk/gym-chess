@@ -8,6 +8,8 @@ from pprint import pprint
 from itertools import chain
 from collections import namedtuple
 from copy import deepcopy
+from collections import defaultdict
+from pprint import pprint
 
 # import gym
 # from gym import spaces, error, utils
@@ -165,9 +167,9 @@ class ChessBoard:
         s = ''
         for i, row in enumerate(self.board[::-1]):
             s += self.NUMBERS[::-1][i]
-            s += ' | '
-            s += ' | '.join([str(x) for x in row])
-            s += ' | '
+            s += ' |'
+            s += '|'.join([f'{str(x):^3s}' for x in row])
+            s += '| '
             s += '\n'
         s += '    ' + '   '.join(self.LETTERS)
         s += '\n'
@@ -194,14 +196,16 @@ class ChessBoard:
             - castling implementation
             -
         """
+        piece_copy = deepcopy(move.piece)
         _from = move.from_.coords
         _to   = move.to_.coords
         print(f'/// SIMULATION >>> {move}')
         print(f'/// FROM >>>')
-        self[_to]= Marked()
+        self[_from].marked = True
+        self[_to] = Marked()
         print(self)
-        piece_copy = deepcopy(move.piece)
-        piece_copy.makes_move()
+        # changes
+        piece_copy.increment_move_counter()
         self[_from] = Empty(_from)
         self[_to] = deepcopy(piece_copy)
 
@@ -216,7 +220,7 @@ class ChessBoard:
         possible_moves = []
 
         for piece in pieces:
-            input()
+            # input()
             print(f'==== {piece} {piece.square}' )
             moves_iter = piece.generate_moves(self.board, attack_mode)
             print('moves generator', moves_iter)
@@ -236,9 +240,24 @@ class ChessBoard:
                         possible_moves += [move_obj]
                     except KingCheck:
                         pass
-        # if not attack_mode:
-        #     possible_moves += self.get_castling_moves(player_color)
+        if not attack_mode:
+            input()
+            print('='*1000)
+            possible_moves += self.get_castling_moves(player_color)
+        self.possible_moves = possible_moves
         return possible_moves
+
+    def show_moves(self, moves):
+        d = defaultdict(list)
+        for move in moves:
+            d[move.piece].append(move)
+        # print(a)
+        for piece, moves in d.items():
+            demo_board = deepcopy(self)
+            for move in moves:
+                demo_board[move.from_.coords] = demo_board[move.from_.coords].mark()
+                demo_board[move.to_.coords] = demo_board[move.to_.coords].mark_attacked()
+            print(demo_board)
 
     def get_castling_moves(self, player_color):
         # Castling:
@@ -250,9 +269,12 @@ class ChessBoard:
         # king's isn't under check
         # 2 squares left/right from king aren't under check
         possible_moves = []
-        pieces = self.pieces
-        rooks = [_ for _ in pieces if isinstance(_, Rook)]
-        king = [_ for _ in pieces if isinstance(_, King)][0]
+        pieces = self.get_pieces(player_color)
+        try:
+            rooks = [_ for _ in pieces if isinstance(_, Rook)]
+            king = [_ for _ in pieces if isinstance(_, King)][0]
+        except:
+            return []
         print(rooks, king)
         for rook in rooks:
             print(rook, rook.square)
@@ -268,6 +290,22 @@ class ChessBoard:
             if (not isinstance(self[one_step.coords], Empty) and
                 not isinstance(self[two_step.coords], Empty)):
                continue
+            if king.color == WHITE:
+                a = king.square.coords[0] == 0
+                b = rook.square.coords[0] in [0,7]
+                c = rook.square.coords[1] in [0,7]
+                print(a, b, c)
+                continue
+            if king.color == WHITE and not (
+                    king.square.coords[0] == 0 and
+                    rook.square.coords[0] in [0,7] and
+                    rook.square.coords[1] in [0,7]):
+                continue
+            elif king.color == BLACK and not (
+                    king.square.coords[0] == 7 and
+                    rook.square.coords[0] in [0,7] and
+                    rook.square.coords[1] in [0,7]):
+                continue
             try:
                 # is King checked ?
                 print(self)
@@ -313,6 +351,9 @@ class ChessBoard:
 # print(b2)
 # sys.exit()
 
+class PlayerHasNoMoves(Exception):
+    pass 
+
 class ChessGame:
     def __init__(self):
         self.player_turn = WHITE
@@ -326,14 +367,19 @@ class ChessGame:
         self.board[4,3] = Rook(WHITE)
         self.board[5,3] = Knight(WHITE)
         self.board[2,3] = Bishop(BLACK)
-        self.board[1,1] = Pawn(WHITE)
+        self.board[1,2] = Pawn(WHITE)
+        self.board[0,1] = King(WHITE)
         self.prev_board = deepcopy(self.board)
 
     def get_possible_moves(self):
         player_color = self.player_turn
-        return self.board.get_possible_moves(player_color, attack_mode=False)
+        possible_moves = self.board.get_possible_moves(player_color, attack_mode=False)
+        if not possible_moves:
+            raise PlayerHasNoMoves()
 
     def make_move(self, move):
+        assert move in self.board.possible_moves, 'ILLEGAL MOVE !!'
+        self.prev_board = deepcopy(self.board)
         self.board.make_move(move)
         self.player_turn = ~self.player_turn
 
@@ -367,7 +413,9 @@ print(chessgame.board.pieces)
 print('\n', separator*2)
 
 print('\nTEST: Calculating ALL possible moves', end='\n'+'-'*35 + '\n')
-print('possible moves:', chessgame.get_possible_moves())
+pmoves = chessgame.get_possible_moves()
+chessgame.board.show_moves(pmoves)
+print('possible moves:', pmoves)
 print('\n', separator*2)
 
 
