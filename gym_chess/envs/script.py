@@ -1,21 +1,25 @@
-LETTERS = 'abcdefgh'
-NUMBERS = '12345678'
+import os
+import sys
+import argparse
 
-a = [[x+y for x in LETTERS] for y in NUMBERS]
-print(a)
+parser = argparse.ArgumentParser(description='demo')
+parser.add_argument(
+    '--verbose',
+    type=int,
+    default=0,
+    metavar='v',
+    help='verbosity level (default: 0, also 1 or 2)'
+)
 
 
-class Demo:
+def verboseprint(*a, level=1, **kw):
+    os_level = int(os.environ['verbose']) or 0
+    print(os_level, level)
+    if level <= os_level:
+        print(*a, **kw)
+# = print if verbose else lambda *a, **k: None
 
-    def __init__(self):
-        pass
-
-    @classmethod
-    def sth(cls):
-        print('class method')
-
-    def sth_else(self):
-        self.sth()
-
-d = Demo()
-d.sth_else()
+if __name__ == '__main__':
+    args = parser.parse_args()
+    os.environ['verbose'] = str(args.verbose)
+    verboseprint('print this motherfucker', level=1)

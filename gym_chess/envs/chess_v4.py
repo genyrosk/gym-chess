@@ -10,14 +10,25 @@ from collections import namedtuple
 from copy import deepcopy
 from collections import defaultdict
 from pprint import pprint
+import argparse
 
 # import gym
 # from gym import spaces, error, utils
 # from gym.utils import seeding
 
 from chess_pieces_v4 import *
+from utils import verboseprint, gucci_print
 
 sign = lambda x: (1, -1)[x < 0]
+
+parser = argparse.ArgumentParser(description='demo')
+parser.add_argument('--verbose',
+    type=int, default=0, metavar='v',
+    help='verbosity level (default: 0, also 1 or 2)'
+)
+args = parser.parse_args()
+os.environ['verbose'] = str(args.verbose)
+
 
 class Square:
     LETTERS = list('abcdefgh')
@@ -79,12 +90,12 @@ class Square:
 
     def __add__(self, move):
         assert isinstance(move, list)
-        print(f'\t\t---> evaluate {self} + <move {move}>', end='')
+        verboseprint(f'\t\t---> evaluate {self} + <move {move}>', end='', l=2)
         row = self.coords[0] + move[0]
         col = self.coords[1] + move[1]
         new_coords = [row, col]
         new_ = Square(*new_coords)
-        print(' ==>>', new_)
+        verboseprint(' ==>>', new_, l=2)
         return new_
 
     def __repr__(self):
@@ -100,6 +111,16 @@ class PlayerMove(namedtuple('PlayerMove',
         return self.__str__()
     def __str__(self):
         return f'{self.piece} {self.from_.name}->{self.to_.name}, {self.move_type}'
+
+class Surender:
+    def __init__(self, player_color):
+        self.player = player_color
+class DrawOffer:
+    def __init__(self, player_color):
+        self.player = player_color
+class DrawAccept:
+    def __init__(self, player_color):
+        self.player = player_color
 
 # TEST
 # p = PlayerMove(BLACK, (1,1), (0,0), 9, 'asd')
@@ -199,20 +220,25 @@ class ChessBoard:
         piece_copy = deepcopy(move.piece)
         _from = move.from_.coords
         _to   = move.to_.coords
-        print(f'/// SIMULATION >>> {move}')
-        print(f'/// FROM >>>')
+        verboseprint(f'/// SIMULATION >>> {move}')
+        verboseprint(f'/// FROM >>>')
         self[_from].marked = True
         self[_to] = Marked()
-        print(self)
+        verboseprint(self)
         # changes
         piece_copy.increment_move_counter()
         self[_from] = Empty(_from)
         self[_to] = deepcopy(piece_copy)
 
-    def get_possible_moves(self, player_color, attack_mode=False):
+    def get_possible_moves(self, player_color):
+        possible_moves = self._get_possible_moves(player_color, attack_mode=False)
+        self.possible_moves = possible_moves
+        return possible_moves
+
+    def _get_possible_moves(self, player_color, attack_mode=False):
         if attack_mode:
-            print('<<<<<<< SIMULATED >>>>>>>')
-        print(f'Compute moves for Player {player_color}:')
+            verboseprint('<<<<<<< SIMULATED >>>>>>>', l=2)
+        verboseprint(f'Compute moves for Player {player_color}:', l=2)
         if not attack_mode:
             print('')
             print(self)
@@ -221,33 +247,32 @@ class ChessBoard:
 
         for piece in pieces:
             # input()
-            print(f'==== {piece} {piece.square}' )
+            verboseprint(f'==== {piece} {piece.square}' )
             moves_iter = piece.generate_moves(self.board, attack_mode)
-            print('moves generator', moves_iter)
+            verboseprint('moves generator', moves_iter)
             for move, move_type in moves_iter:
                 move_obj = PlayerMove(player_color, piece.square,
                                     piece.square + move, piece, move_type)
-                print('...attack_mode:', attack_mode)
-                print('...running simulation')
+                verboseprint('...attack_mode:', attack_mode)
+                verboseprint('...running simulation')
                 next_board = deepcopy(self)
                 next_board.make_move(move_obj)
                 # print(next_board)
                 if not attack_mode:
                     try:
-                        print('...simulation => get possible moves')
-                        _ = next_board.get_possible_moves(~player_color, attack_mode=True)
-                        print('... NO King Check ====>>>> save move', move_obj)
+                        verboseprint('...simulation => get possible moves')
+                        _ = next_board._get_possible_moves(~player_color, attack_mode=True)
+                        verboseprint('... NO King Check ====>>>> save move', move_obj)
                         possible_moves += [move_obj]
                     except KingCheck:
                         pass
-        if not attack_mode:
-            input()
-            print('='*1000)
-            possible_moves += self.get_castling_moves(player_color)
-        self.possible_moves = possible_moves
+        # if not attack_mode:
+        #     gucci_print('CASTLING', gang=3)
+        #     possible_moves += self.get_castling_moves(player_color)
         return possible_moves
 
     def show_moves(self, moves):
+        moves = [move for move in moves if isinstance(move, PlayerMove)]
         d = defaultdict(list)
         for move in moves:
             d[move.piece].append(move)
@@ -309,19 +334,19 @@ class ChessBoard:
             try:
                 # is King checked ?
                 print(self)
-                _ = self.get_possible_moves(~player_color, attack_mode=True)
+                _ = self._get_possible_moves(~player_color, attack_mode=True)
                 # one step
                 move_obj = PlayerMove(player_color, king.square, one_step, king, 'castling')
                 next_board = deepcopy(self)
                 next_board.make_move(move_obj)
                 print(next_board)
-                _ = next_board.get_possible_moves(~player_color, attack_mode=True)
+                _ = next_board._get_possible_moves(~player_color, attack_mode=True)
                 # two step
                 move_obj = PlayerMove(player_color, king.square, two_step, king, 'castling')
                 next_board = deepcopy(self)
                 next_board.make_move(move_obj)
                 print(next_board)
-                _ = next_board.get_possible_moves(~player_color, attack_mode=True)
+                _ = next_board._get_possible_moves(~player_color, attack_mode=True)
 
                 # no KingCheck excpetion raised
                 castle_type = {3: 'king', 4: 'queen'}[abs(distance)]
@@ -331,98 +356,148 @@ class ChessBoard:
                 pass
         return possible_moves
 
-# TEST
-# b = Board()
-# t = (1,2)
-# s = b[t]
-# print(s)
-# s = b[1,2]
-# print(s)
-# b[1,2] = Pawn(WHITE)
-# b[2,2] = Pawn(WHITE)
-
-# b[2,1:4] = [Pawn(WHITE), Pawn(WHITE), Pawn(WHITE)]
-#
-# print(b)
-# pieces = [piece for piece in b if isinstance(piece, ChessPiece)]
-# print(pieces)
-# state = b.state
-# b2 = Board(state=state)
-# print(b2)
-# sys.exit()
-
-class PlayerHasNoMoves(Exception):
-    pass 
 
 class ChessGame:
     def __init__(self):
+        self.total_turns= 0
         self.player_turn = WHITE
+        self.draw_offered = {'WHITE': False, 'BLACK': False}
         self.board = ChessBoard()
-        # self.board[0,:] = [Rook(WHITE), Knight(WHITE), Bishop(WHITE), Queen(WHITE),
-        #                     King(WHITE), Empty(), Empty(), Rook(WHITE)]
-        # self.board[1,:] = [Pawn(WHITE) for _ in range(8)]
-        # self.board[6,:] = [Pawn(BLACK) for _ in range(8)]
-        # self.board[7,:] = [Rook(BLACK), Knight(BLACK), Bishop(BLACK), Queen(BLACK),
-        #                     King(BLACK), Bishop(BLACK), Knight(BLACK), Rook(BLACK)]
-        self.board[4,3] = Rook(WHITE)
-        self.board[5,3] = Knight(WHITE)
-        self.board[2,3] = Bishop(BLACK)
-        self.board[1,2] = Pawn(WHITE)
-        self.board[0,1] = King(WHITE)
-        self.prev_board = deepcopy(self.board)
+        self.board[0,:] = [Rook(WHITE), Knight(WHITE), Bishop(WHITE), Queen(WHITE),
+                            King(WHITE),  Bishop(WHITE), Knight(WHITE), Rook(WHITE)]
+        self.board[1,:] = [Pawn(WHITE) for _ in range(8)]
+        self.board[6,:] = [Pawn(BLACK) for _ in range(8)]
+        self.board[7,:] = [Rook(BLACK), Knight(BLACK), Bishop(BLACK), Queen(BLACK),
+                            King(BLACK), Bishop(BLACK), Knight(BLACK), Rook(BLACK)]
+        # self.board[4,3] = Rook(WHITE)
+        # self.board[5,3] = Knight(WHITE)
+        # self.board[2,3] = Bishop(BLACK)
+        # self.board[1,2] = Pawn(WHITE)
+        # self.board[0,1] = King(WHITE)
+        # self.prev_board = deepcopy(self.board)
 
     def get_possible_moves(self):
         player_color = self.player_turn
-        possible_moves = self.board.get_possible_moves(player_color, attack_mode=False)
+        possible_moves = self.board.get_possible_moves(player_color)
         if not possible_moves:
-            raise PlayerHasNoMoves()
+            try:
+                _ = self.board._get_possible_moves(~player_color, attack_mode=True)
+            except KingCheck:
+                raise PlayerWins(~player_color)
+            else:
+                raise DrawByStalemate()
 
-    def make_move(self, move):
+        if self.draw_offered[self.player_turn.hash()]:
+            self.draw_offered[self.player_turn.hash()] = False
+            possible_moves += [DrawAccept(player_color)]
+        possible_moves += [Surender(player_color)]
+        return possible_moves
+
+    def make_move(self, move, offer_draw=False):
+        assert move.player == self.player_turn, 'WRONG PLAYER MOVE !!'
         assert move in self.board.possible_moves, 'ILLEGAL MOVE !!'
-        self.prev_board = deepcopy(self.board)
+        if offer_draw:
+            self.draw_offered[move.player.hash()] = True
+        if isinstance(move, DrawAccept):
+            raise DrawByAgreement()
+        if isinstance(move, Surender):
+            print('Player surrendered LOL')
+            raise PlayerWins(~self.player_turn)
+        # self.prev_board = deepcopy(self.board)
         self.board.make_move(move)
         self.player_turn = ~self.player_turn
+        if move.player == WHITE:
+            self.total_turns += 1
 
     def __repr__(self):
         return self.__str__()
     def __str__(self):
-        return self.board.__str__()
+        s = f'TOTAL TURNS: {self.total_turns}\n'
+        s += f'PLAYER TURN: {self.player_turn}\n'
+        s += f'DRAW OFFERED: {self.draw_offered[(~self.player_turn).hash()]}\n'
+        s += self.board.__str__()
+        return s
 
 
 class ChessEnv:
-    def __init__(self,):
-        pass
+    def __init__(self, player_color='white'):
+        self.color = player_color
+        self.total_steps = 0
+        self.max_steps = 150
+        self.total_reward = 0
+        self.done = False
+        self.game = ChessGame()
+
     def _seed(self, seed=None):
         pass
-    def _step(self, action):
-        pass
+
+    def _step(self, action, offer_draw):
+        """Run one timestep of the environment's dynamics. When end of episode
+		is reached, reset() should be called to reset the environment's internal state.
+
+		Input
+		-----
+		action : an action provided by the environment
+
+		Outputs
+		-------
+		(observation, reward, done, info)
+		observation : agent's observation of the current environment
+		reward [Float] : amount of reward due to the previous action
+		done : a boolean, indicating whether the episode has ended
+		info : a dictionary containing other diagnostic information from the previous action
+		"""
+        try:
+            self.game.make_move(action)
+        except (DrawByStalemate, DrawByAgreement):
+            self.total_reward += 0
+            self.done = True
+        except PlayerWins as e:
+
+            self.total_reward += -1
+            self.done = True
+        self.done = True
+        self.total_steps += 1
+        state = self.game.board.board
+        info = {'state': state}
+        return state, self.total_reward, self.done, info
+
     def _reset(self):
-        pass
-    def _render(self, mode=['human', 'ansi']):
-        pass
+        """Resets the state of the environment, returning an initial observation.
+		Outputs
+        -------
+        observation : the initial observation of the space. (Initial reward is assumed to be 0.)
+		"""
+        self.game = ChessGame()
+        return self.game.board.board
+
+    def _render(self, mode='human'):
+        outfile = StringIO() if mode == 'ansi' else sys.stdout
+        s = f'total_steps: {self.total_steps}\n'
+        s += f'total_reward: {self.total_reward}\n'
+        s += str(self.game)
+        outfile.write(s)
+        if mode != 'human':
+            return outfile
+
 
 separator = '<>'*30 + '\n'
-
 chessgame = ChessGame()
 print(chessgame.board.pieces)
-# print(chessboard)
-# print('\n', separator*2)
-#
-# print('\nTEST: Retrieving all the pieces on the board', end='\n'+'-'*35 + '\n')
-# print('RESULT: pieces:', chessboard.pieces())
-print('\n', separator*2)
+# print('\nTEST: Calculating ALL possible moves', end='\n'+'-'*35 + '\n')
 
-print('\nTEST: Calculating ALL possible moves', end='\n'+'-'*35 + '\n')
-pmoves = chessgame.get_possible_moves()
-chessgame.board.show_moves(pmoves)
-print('possible moves:', pmoves)
-print('\n', separator*2)
+import random
+
+for i in range(100):
+    print(chessgame)
+    pmoves = chessgame.get_possible_moves()
+    # print('possible moves:', pmoves)
+    # chessgame.board.show_moves(pmoves)
+    chessgame.make_move(random.choice(pmoves))
+    print('\n', separator*2)
+    # input()
 
 
 # for row in chessboard.board:
 #     for x in row:
 #         print(x.square)
-
-class ChessGame:
-    def __init__(self):
-        pass

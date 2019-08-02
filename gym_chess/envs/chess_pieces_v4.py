@@ -1,6 +1,7 @@
 import os
 import sys
 from copy import deepcopy
+from utils import verboseprint, gucci_print
 
 cli_white = "93m"
 cli_black = "92m"
@@ -14,7 +15,6 @@ class ChessColor:
     def __repr__(self):
         return self.__str__()
     def __str__(self):
-        print(self.cli_color)
         return f"<\033[{self.cli_color}{self.color}\033[0m>"
     def __eq__(self, other):
         if self.color == other.color:
@@ -23,6 +23,8 @@ class ChessColor:
             return False
     def __invert__(self):
         return ChessColor(self.dual_map[self.color])
+    def hash(self):
+        return self.color
 
 BLACK = ChessColor('BLACK', cli_black)
 WHITE = ChessColor('WHITE', cli_white)
@@ -181,16 +183,16 @@ class ChessPiece(metaclass=ChessPieceMeta):
         for iter_move in self.moves:
             for move in iter_move:
                 # input()
-                print(f'\n\t >>> For {self} {self.square} analyse move {move}' )
+                verboseprint(f'\n\t >>> For {self} {self.square} analyse move {move}', l=2)
                 try:
                     new_square = self.square + move
                     target_piece = chessboard[new_square.coords]
                     legal, move_type = self.assess_move_to(target_piece)
-                    print('assessment ==>', legal, move_type)
+                    verboseprint('assessment ==>', legal, move_type)
                     if attack_mode and move_type == 'king_check':
                         raise KingCheck()
                     if legal:
-                        print('move is LEGAL => yield')
+                        verboseprint('move is LEGAL => yield', l=2)
                         yield move, move_type
                         if move_type == 'capture':
                             break
@@ -245,16 +247,16 @@ class Pawn(ChessPiece):
         for iter_move in self.attacks:
             for move in iter_move:
                 # input()
-                print(f'\n\t >>> For {self} {self.square} analyse move {move}' )
+                verboseprint(f'\n\t >>> For {self} {self.square} analyse move {move}', l=2)
                 try:
                     new_square = self.square + move
                     target_piece = chessboard[new_square.coords]
                     legal, move_type = self.assess_attack_on(target_piece)
-                    print('assessment ==>', legal, move_type)
+                    verboseprint('assessment ==>', legal, move_type, l=2)
                     if attack_mode and move_type == 'king_check':
                         raise KingCheck()
                     if legal:
-                        print('move is LEGAL => yield')
+                        verboseprint('move is LEGAL => yield', l=2)
                         yield move, move_type
                         if move_type == 'capture':
                             break
@@ -263,7 +265,6 @@ class Pawn(ChessPiece):
                 except SquareOutsideBoard:
                     break
 
-
 class Rook(ChessPiece):
     def __init__(self, color):
         self.can_castle = True
@@ -271,7 +272,6 @@ class Rook(ChessPiece):
         self.icons = ['♜', '♖']
         self.move_types = [UP_ITER, DOWN_ITER, LEFT_ITER, RIGHT_ITER]
         super().__init__(color)
-
 
 class Knight(ChessPiece):
     def __init__(self, color):
@@ -282,13 +282,11 @@ class Knight(ChessPiece):
         ]
         super().__init__(color)
 
-
 class Bishop(ChessPiece):
     def __init__(self, color):
         self.icons = ['♝', '♗']
         self.move_types = [UP_LEFT_ITER, UP_RIGHT_ITER, DOWN_LEFT_ITER, DOWN_RIGHT_ITER]
         super().__init__(color)
-
 
 class Queen(ChessPiece):
     def __init__(self, color):
@@ -298,7 +296,6 @@ class Queen(ChessPiece):
             UP_LEFT_ITER, UP_RIGHT_ITER, DOWN_LEFT_ITER, DOWN_RIGHT_ITER
         ]
         super().__init__(color)
-
 
 class King(ChessPiece):
     def __init__(self, color):
@@ -311,7 +308,6 @@ class King(ChessPiece):
         ]
         super().__init__(color)
 
-
 class Empty:
     def __init__(self, square=None):
         self.square = square
@@ -323,7 +319,6 @@ class Empty:
     def mark_attacked(self):
         return Marked()
 
-
 class Marked:
     def __init__(self, marker='X'):
         self.marker = marker
@@ -332,12 +327,26 @@ class Marked:
     def __str__(self):
         return self.marker
 
+class LogicException(Exception):
+    pass
+class SquareOutsideBoard(LogicException):
+    pass
+class EnemyPiecePresent(LogicException):
+    pass
+class OwnPiecePresent(LogicException):
+    pass
+class KingCheck(LogicException):
+    pass
 
-class SquareOutsideBoard(Exception):
+class GameEvent(Exception):
     pass
-class EnemyPiecePresent(Exception):
+class PlayerHasNoMoves(GameEvent):
+    def __init__(self, player):
+        self.player = player
+class PlayerWins(GameEvent):
+    def __init__(self, player):
+        self.player = player
+class DrawByStalemate(GameEvent):
     pass
-class OwnPiecePresent(Exception):
-    pass
-class KingCheck(Exception):
+class DrawByAgreement(GameEvent):
     pass
