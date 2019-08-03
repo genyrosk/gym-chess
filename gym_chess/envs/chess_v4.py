@@ -90,12 +90,12 @@ class Square:
 
     def __add__(self, move):
         assert isinstance(move, list)
-        verboseprint(f'\t\t---> evaluate {self} + <move {move}>', end='', l=2)
+        # verboseprint(f'\t\t---> evaluate {self} + <move {move}>', end='', l=2)
         row = self.coords[0] + move[0]
         col = self.coords[1] + move[1]
         new_coords = [row, col]
         new_ = Square(*new_coords)
-        verboseprint(' ==>>', new_, l=2)
+        # verboseprint(' ==>>', new_, l=2)
         return new_
 
     def __repr__(self):
@@ -197,7 +197,7 @@ class ChessBoard:
         return s
 
     @property
-    def pieces(self, color=None):
+    def pieces(self):
         return [_ for _ in self.__iter__() if isinstance(_, ChessPiece)]
 
     def get_pieces(self, color):
@@ -217,52 +217,61 @@ class ChessBoard:
             - castling implementation
             -
         """
-        piece_copy = deepcopy(move.piece)
+        piece_copy = deepcopy(move.piece) ## <=== COPY
         _from = move.from_.coords
         _to   = move.to_.coords
-        verboseprint(f'/// SIMULATION >>> {move}')
-        verboseprint(f'/// FROM >>>')
-        self[_from].marked = True
-        self[_to] = Marked()
-        verboseprint(self)
+        #debug
+        # verboseprint(f'/// SIMULATION >>> {move}')
+        # verboseprint(f'/// FROM >>>')
+        # self[_from].marked = True
+        # self[_to] = Marked()
+        # verboseprint(self)
         # changes
         piece_copy.increment_move_counter()
         self[_from] = Empty(_from)
-        self[_to] = deepcopy(piece_copy)
+        self[_to] = piece_copy  ## <=== COPY
 
     def get_possible_moves(self, player_color):
+        # print('player_color ->', player_color)
         possible_moves = self._get_possible_moves(player_color, attack_mode=False)
         self.possible_moves = possible_moves
         return possible_moves
 
     def _get_possible_moves(self, player_color, attack_mode=False):
-        if attack_mode:
-            verboseprint('<<<<<<< SIMULATED >>>>>>>', l=2)
-        verboseprint(f'Compute moves for Player {player_color}:', l=2)
-        if not attack_mode:
-            print('')
-            print(self)
+        # print('!!! attack_mode ->', attack_mode)
+        # if attack_mode:
+        #     verboseprint('<<<<<<< SIMULATED >>>>>>>', l=2)
+        # verboseprint(f'Compute moves for Player {player_color}:', l=2)
+        # if not attack_mode:
+        #     print('')
+        #     print(self)
         pieces = self.get_pieces(player_color)
         possible_moves = []
 
         for piece in pieces:
             # input()
-            verboseprint(f'==== {piece} {piece.square}' )
+            # print(f'==== {piece} {piece.square}')
             moves_iter = piece.generate_moves(self.board, attack_mode)
-            verboseprint('moves generator', moves_iter)
+            # verboseprint('moves generator', moves_iter)
             for move, move_type in moves_iter:
+                # if not attack_mode:
+                    # print('!!! attack_mode ->', attack_mode)
                 move_obj = PlayerMove(player_color, piece.square,
                                     piece.square + move, piece, move_type)
-                verboseprint('...attack_mode:', attack_mode)
-                verboseprint('...running simulation')
-                next_board = deepcopy(self)
-                next_board.make_move(move_obj)
+                # verboseprint('...attack_mode:', attack_mode)
+                # verboseprint('...running simulation')
+                # next_board = deepcopy(self)
+                # next_board = ChessBoard(self.state)
+                # next_board.make_move(move_obj)
                 # print(next_board)
                 if not attack_mode:
+                    # print(move_obj)
                     try:
-                        verboseprint('...simulation => get possible moves')
+                        next_board = ChessBoard(self.state)
+                        next_board.make_move(move_obj)
+                        # verboseprint('...simulation => get possible moves')
                         _ = next_board._get_possible_moves(~player_color, attack_mode=True)
-                        verboseprint('... NO King Check ====>>>> save move', move_obj)
+                        # verboseprint('... NO King Check ====>>>> save move', move_obj)
                         possible_moves += [move_obj]
                     except KingCheck:
                         pass
@@ -278,7 +287,8 @@ class ChessBoard:
             d[move.piece].append(move)
         # print(a)
         for piece, moves in d.items():
-            demo_board = deepcopy(self)
+            # demo_board = deepcopy(self)
+            demo_board = ChessBoard(self.state)
             for move in moves:
                 demo_board[move.from_.coords] = demo_board[move.from_.coords].mark()
                 demo_board[move.to_.coords] = demo_board[move.to_.coords].mark_attacked()
@@ -337,13 +347,15 @@ class ChessBoard:
                 _ = self._get_possible_moves(~player_color, attack_mode=True)
                 # one step
                 move_obj = PlayerMove(player_color, king.square, one_step, king, 'castling')
-                next_board = deepcopy(self)
+                # next_board = deepcopy(self)
+                next_board = ChessBoard(self.state)
                 next_board.make_move(move_obj)
                 print(next_board)
                 _ = next_board._get_possible_moves(~player_color, attack_mode=True)
                 # two step
                 move_obj = PlayerMove(player_color, king.square, two_step, king, 'castling')
-                next_board = deepcopy(self)
+                # next_board = deepcopy(self)
+                next_board = ChessBoard(self.state)
                 next_board.make_move(move_obj)
                 print(next_board)
                 _ = next_board._get_possible_moves(~player_color, attack_mode=True)
@@ -481,21 +493,45 @@ class ChessEnv:
             return outfile
 
 
+import random
+import time
+
+
+s = time.time()
+for j in range(2):
+    g = ChessGame()
+    b = g.board
+    for i in range(100):
+        # player 1
+        moves = b.get_possible_moves(WHITE)
+        b.make_move(random.choice(moves))
+        # print('')
+        # print(b)
+        # player 2
+        moves = b.get_possible_moves(BLACK)
+        b.make_move(random.choice(moves))
+        # print('')
+        # print(b)
+e = time.time()
+print('time', e-s)
+sys.exit()
 separator = '<>'*30 + '\n'
-chessgame = ChessGame()
-print(chessgame.board.pieces)
 # print('\nTEST: Calculating ALL possible moves', end='\n'+'-'*35 + '\n')
 
 import random
 
-for i in range(100):
-    print(chessgame)
-    pmoves = chessgame.get_possible_moves()
-    # print('possible moves:', pmoves)
-    # chessgame.board.show_moves(pmoves)
-    chessgame.make_move(random.choice(pmoves))
-    print('\n', separator*2)
-    # input()
+for i in range(10):
+    chessgame = ChessGame()
+    print(chessgame.board.pieces)
+    for i in range(100):
+
+        print(chessgame)
+        pmoves = chessgame.get_possible_moves()
+        # print('possible moves:', pmoves)
+        # chessgame.board.show_moves(pmoves)
+        chessgame.make_move(random.choice(pmoves))
+        print('\n', separator*2)
+        # input()
 
 
 # for row in chessboard.board:

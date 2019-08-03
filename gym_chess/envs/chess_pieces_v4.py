@@ -6,6 +6,7 @@ from utils import verboseprint, gucci_print
 cli_white = "93m"
 cli_black = "92m"
 
+
 class ChessColor:
     cli_colors = {'BLACK': cli_black, 'WHITE': cli_white}
     dual_map = {'BLACK':'WHITE', 'WHITE':'BLACK'}
@@ -66,39 +67,39 @@ CASTLES = {
     'queen': QueenCastling
 }
 
-# one time
-UP = Move([1,0])
-DOWN = Move([-1,0])
-LEFT = Move([0,-1])
-RIGHT = Move([0,1])
-UP_LEFT = Move([1,-1])
-UP_RIGHT = Move([1,1])
-DOWN_LEFT = Move([-1,-1])
-DOWN_RIGHT = Move([-1,1])
-
-# repeatable
-UP_ITER = Move([1,0], iterable=True)
-DOWN_ITER = Move([-1,0], iterable=True)
-LEFT_ITER = Move([0,-1], iterable=True)
-RIGHT_ITER = Move([0,1], iterable=True)
-UP_LEFT_ITER = Move([1,-1], iterable=True)
-UP_RIGHT_ITER = Move([1,1], iterable=True)
-DOWN_LEFT_ITER = Move([-1,-1], iterable=True)
-DOWN_RIGHT_ITER = Move([-1,1], iterable=True)
-
-# special pawn
-TWO_UP = Move([2,0])
-TWO_DOWN = Move([-2,0])
-
-# knight
-UP_UP_RIGHT = Move([2,1])
-UP_RIGHT_RIGHT = Move([1,2])
-UP_UP_LEFT = Move([2,-1])
-UP_LEFT_LEFT = Move([1,-2])
-DOWN_DOWN_LEFT = Move([-2,-1])
-DOWN_LEFT_LEFT = Move([-1,-2])
-DOWN_DOWN_RIGHT = Move([-2,1])
-DOWN_RIGHT_RIGHT = Move([-1,2])
+# # one time
+# UP = Move([1,0])
+# DOWN = Move([-1,0])
+# LEFT = Move([0,-1])
+# RIGHT = Move([0,1])
+# UP_LEFT = Move([1,-1])
+# UP_RIGHT = Move([1,1])
+# DOWN_LEFT = Move([-1,-1])
+# DOWN_RIGHT = Move([-1,1])
+#
+# # repeatable
+# UP_ITER = Move([1,0], iterable=True)
+# DOWN_ITER = Move([-1,0], iterable=True)
+# LEFT_ITER = Move([0,-1], iterable=True)
+# RIGHT_ITER = Move([0,1], iterable=True)
+# UP_LEFT_ITER = Move([1,-1], iterable=True)
+# UP_RIGHT_ITER = Move([1,1], iterable=True)
+# DOWN_LEFT_ITER = Move([-1,-1], iterable=True)
+# DOWN_RIGHT_ITER = Move([-1,1], iterable=True)
+#
+# # special pawn
+# TWO_UP = Move([2,0])
+# TWO_DOWN = Move([-2,0])
+#
+# # knight
+# UP_UP_RIGHT = Move([2,1])
+# UP_RIGHT_RIGHT = Move([1,2])
+# UP_UP_LEFT = Move([2,-1])
+# UP_LEFT_LEFT = Move([1,-2])
+# DOWN_DOWN_LEFT = Move([-2,-1])
+# DOWN_LEFT_LEFT = Move([-1,-2])
+# DOWN_DOWN_RIGHT = Move([-2,1])
+# DOWN_RIGHT_RIGHT = Move([-1,2])
 
 
 class ChessPieceMeta(type):
@@ -183,23 +184,32 @@ class ChessPiece(metaclass=ChessPieceMeta):
         for iter_move in self.moves:
             for move in iter_move:
                 # input()
-                verboseprint(f'\n\t >>> For {self} {self.square} analyse move {move}', l=2)
+                # if attack_mode:
+                #     print(f'\t >>> For {self} {self.square} analyse move {move}, [attack_mode: {attack_mode}]')
+                # else:
+                #     print(f'>>> TRY {self} {self.square} analyse move {move}, [attack_mode: {attack_mode}]')
                 try:
                     new_square = self.square + move
                     target_piece = chessboard[new_square.coords]
                     legal, move_type = self.assess_move_to(target_piece)
-                    verboseprint('assessment ==>', legal, move_type)
+                    # verboseprint('assessment ==>', legal, move_type)
                     if attack_mode and move_type == 'king_check':
+                        # print('\t\t => king check')
                         raise KingCheck()
                     if legal:
-                        verboseprint('move is LEGAL => yield', l=2)
+                        # verboseprint('move is LEGAL => yield', l=2)
+                        # print('\t\t => legal')
                         yield move, move_type
                         if move_type == 'capture':
+                            # print('\t\t => capture')
                             break
                     else:
+                        # print('\t\t => illegal')
                         break
                 except SquareOutsideBoard:
+                    # print('\t\t => outisde board')
                     break
+        return
 
 class Pawn(ChessPiece):
     def __init__(self, color):
@@ -208,6 +218,10 @@ class Pawn(ChessPiece):
         self.move_types = None
     @property
     def moves(self):
+        UP = Move([1,0])
+        DOWN = Move([-1,0])
+        TWO_UP = Move([2,0])
+        TWO_DOWN = Move([-2,0])
         if self.color == WHITE:
             if self.total_moves == 0:
                 return [UP, TWO_UP]
@@ -220,6 +234,10 @@ class Pawn(ChessPiece):
                 return [DOWN]
     @property
     def attacks(self):
+        UP_LEFT = Move([1,-1])
+        UP_RIGHT = Move([1,1])
+        DOWN_LEFT = Move([-1,-1])
+        DOWN_RIGHT = Move([-1,1])
         if self.color == WHITE:
             return [UP_LEFT, UP_RIGHT]
         else:
@@ -247,16 +265,16 @@ class Pawn(ChessPiece):
         for iter_move in self.attacks:
             for move in iter_move:
                 # input()
-                verboseprint(f'\n\t >>> For {self} {self.square} analyse move {move}', l=2)
+                # verboseprint(f'\n\t >>> For {self} {self.square} analyse move {move}', l=2)
                 try:
                     new_square = self.square + move
                     target_piece = chessboard[new_square.coords]
                     legal, move_type = self.assess_attack_on(target_piece)
-                    verboseprint('assessment ==>', legal, move_type, l=2)
+                    # verboseprint('assessment ==>', legal, move_type, l=2)
                     if attack_mode and move_type == 'king_check':
                         raise KingCheck()
                     if legal:
-                        verboseprint('move is LEGAL => yield', l=2)
+                        # verboseprint('move is LEGAL => yield', l=2)
                         yield move, move_type
                         if move_type == 'capture':
                             break
@@ -267,6 +285,14 @@ class Pawn(ChessPiece):
 
 class Rook(ChessPiece):
     def __init__(self, color):
+        UP_ITER = Move([1,0], iterable=True)
+        DOWN_ITER = Move([-1,0], iterable=True)
+        LEFT_ITER = Move([0,-1], iterable=True)
+        RIGHT_ITER = Move([0,1], iterable=True)
+        UP_LEFT_ITER = Move([1,-1], iterable=True)
+        UP_RIGHT_ITER = Move([1,1], iterable=True)
+        DOWN_LEFT_ITER = Move([-1,-1], iterable=True)
+        DOWN_RIGHT_ITER = Move([-1,1], iterable=True)
         self.can_castle = True
         self.has_castled = False
         self.icons = ['♜', '♖']
@@ -275,6 +301,14 @@ class Rook(ChessPiece):
 
 class Knight(ChessPiece):
     def __init__(self, color):
+        UP_UP_RIGHT = Move([2,1])
+        UP_RIGHT_RIGHT = Move([1,2])
+        UP_UP_LEFT = Move([2,-1])
+        UP_LEFT_LEFT = Move([1,-2])
+        DOWN_DOWN_LEFT = Move([-2,-1])
+        DOWN_LEFT_LEFT = Move([-1,-2])
+        DOWN_DOWN_RIGHT = Move([-2,1])
+        DOWN_RIGHT_RIGHT = Move([-1,2])
         self.icons = ['♞', '♘']
         self.move_types = [
             UP_UP_RIGHT, UP_RIGHT_RIGHT, UP_UP_LEFT, UP_LEFT_LEFT,
@@ -284,12 +318,28 @@ class Knight(ChessPiece):
 
 class Bishop(ChessPiece):
     def __init__(self, color):
+        UP_ITER = Move([1,0], iterable=True)
+        DOWN_ITER = Move([-1,0], iterable=True)
+        LEFT_ITER = Move([0,-1], iterable=True)
+        RIGHT_ITER = Move([0,1], iterable=True)
+        UP_LEFT_ITER = Move([1,-1], iterable=True)
+        UP_RIGHT_ITER = Move([1,1], iterable=True)
+        DOWN_LEFT_ITER = Move([-1,-1], iterable=True)
+        DOWN_RIGHT_ITER = Move([-1,1], iterable=True)
         self.icons = ['♝', '♗']
         self.move_types = [UP_LEFT_ITER, UP_RIGHT_ITER, DOWN_LEFT_ITER, DOWN_RIGHT_ITER]
         super().__init__(color)
 
 class Queen(ChessPiece):
     def __init__(self, color):
+        UP_ITER = Move([1,0], iterable=True)
+        DOWN_ITER = Move([-1,0], iterable=True)
+        LEFT_ITER = Move([0,-1], iterable=True)
+        RIGHT_ITER = Move([0,1], iterable=True)
+        UP_LEFT_ITER = Move([1,-1], iterable=True)
+        UP_RIGHT_ITER = Move([1,1], iterable=True)
+        DOWN_LEFT_ITER = Move([-1,-1], iterable=True)
+        DOWN_RIGHT_ITER = Move([-1,1], iterable=True)
         self.icons = ['♛', '♕']
         self.move_types = [
             UP_ITER, DOWN_ITER, LEFT_ITER, RIGHT_ITER,
@@ -299,6 +349,14 @@ class Queen(ChessPiece):
 
 class King(ChessPiece):
     def __init__(self, color):
+        UP = Move([1,0])
+        DOWN = Move([-1,0])
+        LEFT = Move([0,-1])
+        RIGHT = Move([0,1])
+        UP_LEFT = Move([1,-1])
+        UP_RIGHT = Move([1,1])
+        DOWN_LEFT = Move([-1,-1])
+        DOWN_RIGHT = Move([-1,1])
         self.is_checked = False
         self.has_castled = False
         self.icons = ['♚', '♔']

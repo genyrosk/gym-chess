@@ -1,20 +1,22 @@
 import sys
-import random 
+import random
 import numpy as np
 
 import gym
 import gym_chess
 
-env = gym.make('ChessVsRandomBot-v0')
+env = gym.make('ChessVsRandomBot-v0', log=False)
 
 #
 # Play against random bot
 #
-num_episodes = 10
-num_steps_per_episode = 50
+num_episodes = 2
+num_steps_per_episode = 100
 
 collected_rewards = []
 
+import time
+s = time.time()
 for i in range(num_episodes):
 	initial_state = env.reset()
 	print('\n'*2,'<'*5, '='*10, 'NEW GAME', '='*10, '>'*5)
@@ -50,13 +52,13 @@ for i in range(num_episodes):
 
 		# perform action
 		state, reward, done, __ = env.step(a)
-		total_reward += reward		
+		total_reward += reward
 
 	collected_rewards.append(total_reward)
-
+e = time.time()
+print('time', e-s)
 print('\n')
 print('#'*40)
 print('#'*40)
 print('#'*40)
 print("\nAVERAGE SCORE: ", sum(collected_rewards) / num_episodes)
-
