@@ -10,8 +10,8 @@ env = gym.make('ChessVsRandomBot-v0', log=False)
 #
 # Play against random bot
 #
-num_episodes = 2
-num_steps_per_episode = 100
+num_episodes = 5
+num_steps_per_episode = 50
 
 collected_rewards = []
 

@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+import random
 # import time
 
 import numpy as np
@@ -11,13 +13,14 @@ from copy import deepcopy
 from collections import defaultdict
 from pprint import pprint
 import argparse
+import gym
 
 # import gym
 # from gym import spaces, error, utils
 # from gym.utils import seeding
 
-from chess_pieces_v4 import *
-from utils import verboseprint, gucci_print
+from gym_chess.envs.chess_pieces_v4 import *
+from gym_chess.envs.utils import verboseprint, gucci_print
 
 sign = lambda x: (1, -1)[x < 0]
 
@@ -402,7 +405,7 @@ class ChessGame:
         if self.draw_offered[self.player_turn.hash()]:
             self.draw_offered[self.player_turn.hash()] = False
             possible_moves += [DrawAccept(player_color)]
-        possible_moves += [Surender(player_color)]
+        # possible_moves += [Surender(player_color)]
         return possible_moves
 
     def make_move(self, move, offer_draw=False):
@@ -431,8 +434,8 @@ class ChessGame:
         return s
 
 
-class ChessEnv:
-    def __init__(self, player_color='white'):
+class ChessEnv(gym.Env):
+    def __init__(self, player_color='white', opponent=None, log=None):
         self.color = player_color
         self.total_steps = 0
         self.max_steps = 150
@@ -440,10 +443,10 @@ class ChessEnv:
         self.done = False
         self.game = ChessGame()
 
-    def _seed(self, seed=None):
+    def seed(self, seed=None):
         pass
 
-    def _step(self, action, offer_draw):
+    def step(self, action, offer_draw=False):
         """Run one timestep of the environment's dynamics. When end of episode
 		is reached, reset() should be called to reset the environment's internal state.
 
@@ -459,22 +462,38 @@ class ChessEnv:
 		done : a boolean, indicating whether the episode has ended
 		info : a dictionary containing other diagnostic information from the previous action
 		"""
+        self.done = False
+
         try:
             self.game.make_move(action)
         except (DrawByStalemate, DrawByAgreement):
             self.total_reward += 0
             self.done = True
         except PlayerWins as e:
-
+            # dtermine player color
+            print('player wins !')
             self.total_reward += -1
             self.done = True
-        self.done = True
+
+        # Copmuter
+        try:
+            moves = self.game.get_possible_moves()
+            self.game.make_move(random.choice(moves))
+        except (DrawByStalemate, DrawByAgreement):
+            self.total_reward += 0
+            self.done = True
+        except PlayerWins as e:
+            # dtermine player color
+            print('player wins !')
+            self.total_reward += -1
+            self.done = True
+
         self.total_steps += 1
         state = self.game.board.board
         info = {'state': state}
         return state, self.total_reward, self.done, info
 
-    def _reset(self):
+    def reset(self):
         """Resets the state of the environment, returning an initial observation.
 		Outputs
         -------
@@ -483,7 +502,7 @@ class ChessEnv:
         self.game = ChessGame()
         return self.game.board.board
 
-    def _render(self, mode='human'):
+    def render(self, mode='human'):
         outfile = StringIO() if mode == 'ansi' else sys.stdout
         s = f'total_steps: {self.total_steps}\n'
         s += f'total_reward: {self.total_reward}\n'
@@ -493,45 +512,67 @@ class ChessEnv:
             return outfile
 
 
-import random
-import time
-
-
-s = time.time()
-for j in range(2):
-    g = ChessGame()
-    b = g.board
-    for i in range(100):
-        # player 1
-        moves = b.get_possible_moves(WHITE)
-        b.make_move(random.choice(moves))
-        # print('')
-        # print(b)
-        # player 2
-        moves = b.get_possible_moves(BLACK)
-        b.make_move(random.choice(moves))
-        # print('')
-        # print(b)
-e = time.time()
-print('time', e-s)
-sys.exit()
-separator = '<>'*30 + '\n'
+# import random
+# import time
+# separator = '<>'*30 + '\n'
+#
+# s = time.time()
+# for j in range(5):
+#     env = ChessEnv()
+#     for i in range(50):
+#         moves = env.game.get_possible_moves()
+#         state, reward, done, _ = env.step(random.choice(moves))
+#         if done:
+#             break
+# e = time.time()
+# print('time', e-s)
+# sys.exit()
+#
+#
+# s = time.time()
+# for j in range(5):
+#     g = ChessGame()
+#     for i in range(50):
+#         # player 1
+#         try:
+#             moves = g.get_possible_moves()
+#             g.make_move(random.choice(moves))
+#             # print('')
+#             # print(b)
+#             # player 2
+#             moves = g.get_possible_moves()
+#             g.make_move(random.choice(moves))
+#             # print('')
+#             # print(b)
+#         except (DrawByAgreement, PlayerWins):
+#             pass
+# e = time.time()
+# print('time', e-s)
+# sys.exit()
+#
+#
+# s = time.time()
+# for j in range(5):
+#     g = ChessGame()
+#     b = g.board
+#     for i in range(50):
+#         # player 1
+#         try:
+#             moves = b.get_possible_moves(WHITE)
+#             b.make_move(random.choice(moves))
+#             # print('')
+#             # print(b)
+#             # player 2
+#             moves = b.get_possible_moves(BLACK)
+#             b.make_move(random.choice(moves))
+#             # print('')
+#             # print(b)
+#         except (DrawByAgreement, PlayerWins):
+#             pass
+# e = time.time()
+# print('time', e-s)
+# sys.exit()
 # print('\nTEST: Calculating ALL possible moves', end='\n'+'-'*35 + '\n')
-
-import random
-
-for i in range(10):
-    chessgame = ChessGame()
-    print(chessgame.board.pieces)
-    for i in range(100):
-
-        print(chessgame)
-        pmoves = chessgame.get_possible_moves()
-        # print('possible moves:', pmoves)
-        # chessgame.board.show_moves(pmoves)
-        chessgame.make_move(random.choice(pmoves))
-        print('\n', separator*2)
-        # input()
 
 
 # for row in chessboard.board:

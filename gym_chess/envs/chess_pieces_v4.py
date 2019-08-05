@@ -1,7 +1,7 @@
 import os
 import sys
 from copy import deepcopy
-from utils import verboseprint, gucci_print
+from gym_chess.envs.utils import verboseprint, gucci_print
 
 cli_white = "93m"
 cli_black = "92m"
