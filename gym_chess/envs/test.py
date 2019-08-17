@@ -126,7 +126,7 @@ def test_moves_6():
 
 def test_moves_7():
     board = ChessBoard()
-    board[6,4] = King(BLACK)
+    board[5,4] = King(BLACK)
     board[4,3] = Bishop(BLACK)
     board[3,4] = King(WHITE)
     print(board)

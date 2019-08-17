@@ -197,43 +197,22 @@ class ChessPiece(metaclass=ChessPieceMeta):
     def generate_moves(self, chessboard, attack_mode=False):
         for iter_move in self.moves:
             for move in iter_move:
-                # input()
-                # if attack_mode:
-                #     print(f'\t >>> For {self} {self.square} analyse move {move}, [attack_mode: {attack_mode}]')
-                # else:
-                #     print(f'>>> TRY {self} {self.square} analyse move {move}, [attack_mode: {attack_mode}]')
                 try:
                     new_square = tuple(self.square + move)
                     if (new_square[0] > 7 or new_square[0] < 0 or
                         new_square[1] > 7 or new_square[1] < 0):
                         raise SquareOutsideBoard
                     target_piece = chessboard[new_square]
-                    # print(self.square)
-                    # print(move)
-                    # print(new_square)
-                    # print(target_piece)
                     legal, move_type = self.assess_move_to(target_piece)
-
-                    if not attack_mode:
-                        print(new_square)
-                        print(legal, move_type)
-                    # verboseprint('assessment ==>', legal, move_type)
                     if attack_mode and move_type == 'king_check':
-                        print('\t\t => king check')
                         raise KingCheck()
-
                     if legal:
-                        # verboseprint('move is LEGAL => yield', l=2)
-                        # print('\t\t => legal')
                         yield move, move_type
                         if move_type == 'capture':
-                            # print('\t\t => capture')
                             break
                     else:
-                        # print('\t\t => illegal')
                         break
                 except SquareOutsideBoard:
-                    # print('\t\t => outisde board')
                     break
         return
 
@@ -290,8 +269,6 @@ class Pawn(ChessPiece):
             yield move
         for iter_move in self.attacks:
             for move in iter_move:
-                # input()
-                # verboseprint(f'\n\t >>> For {self} {self.square} analyse move {move}', l=2)
                 try:
                     new_square = tuple(self.square + move)
                     if (new_square[0] > 7 or new_square[0] < 0 or
@@ -299,11 +276,9 @@ class Pawn(ChessPiece):
                         raise SquareOutsideBoard
                     target_piece = chessboard[new_square]
                     legal, move_type = self.assess_attack_on(target_piece)
-                    # verboseprint('assessment ==>', legal, move_type, l=2)
                     if attack_mode and move_type == 'king_check':
                         raise KingCheck()
                     if legal:
-                        # verboseprint('move is LEGAL => yield', l=2)
                         yield move, move_type
                         if move_type == 'capture':
                             break
