@@ -1,11 +1,11 @@
 import os
 import sys
+import numpy as np
 from copy import deepcopy
 from gym_chess.envs.utils import verboseprint, gucci_print
 
 cli_white = "93m"
 cli_black = "92m"
-
 
 class ChessColor:
     cli_colors = {'BLACK': cli_black, 'WHITE': cli_white}
@@ -33,7 +33,7 @@ WHITE = ChessColor('WHITE', cli_white)
 
 class Move:
     def __init__(self, move_coords, iterable=False):
-        self.move_coords =  move_coords
+        self.move_coords =  np.array(move_coords)
         self.iterable = iterable
         self.has_moved = False
     def __iter__(self):
@@ -43,10 +43,11 @@ class Move:
     def __next__(self):
         if self.iterable:
             self.n += 1
-            return [
-                self.move_coords[0]*self.n,
-                self.move_coords[1]*self.n
-            ]
+            return self.move_coords * self.n
+            # return [
+            #     self.move_coords[0]*self.n,
+            #     self.move_coords[1]*self.n
+            # ]
         else:
             if not self.has_moved:
                 self.has_moved = True
@@ -147,6 +148,10 @@ class ChessPiece(metaclass=ChessPieceMeta):
             if not os.getenv('CLI_COLOR', True):
                 return f"{s1}{self.icons[1]}{s2}"
             return f"\033[{cli_black}{s1}{self.icons[0]}{s2}\033[0m"
+    def copy(self):
+        cp = self.__class__(self.color)
+        cp.total_moves = self.total_moves
+        return cp
     @property
     def moves(self):
         return self.move_types
@@ -188,6 +193,7 @@ class ChessPiece(metaclass=ChessPieceMeta):
         else:
             return True, 'capture'
 
+    # @profile
     def generate_moves(self, chessboard, attack_mode=False):
         for iter_move in self.moves:
             for move in iter_move:
@@ -197,13 +203,25 @@ class ChessPiece(metaclass=ChessPieceMeta):
                 # else:
                 #     print(f'>>> TRY {self} {self.square} analyse move {move}, [attack_mode: {attack_mode}]')
                 try:
-                    new_square = self.square + move
-                    target_piece = chessboard[new_square.coords]
+                    new_square = tuple(self.square + move)
+                    if (new_square[0] > 7 or new_square[0] < 0 or
+                        new_square[1] > 7 or new_square[1] < 0):
+                        raise SquareOutsideBoard
+                    target_piece = chessboard[new_square]
+                    # print(self.square)
+                    # print(move)
+                    # print(new_square)
+                    # print(target_piece)
                     legal, move_type = self.assess_move_to(target_piece)
+
+                    if not attack_mode:
+                        print(new_square)
+                        print(legal, move_type)
                     # verboseprint('assessment ==>', legal, move_type)
                     if attack_mode and move_type == 'king_check':
-                        # print('\t\t => king check')
+                        print('\t\t => king check')
                         raise KingCheck()
+
                     if legal:
                         # verboseprint('move is LEGAL => yield', l=2)
                         # print('\t\t => legal')
@@ -275,8 +293,11 @@ class Pawn(ChessPiece):
                 # input()
                 # verboseprint(f'\n\t >>> For {self} {self.square} analyse move {move}', l=2)
                 try:
-                    new_square = self.square + move
-                    target_piece = chessboard[new_square.coords]
+                    new_square = tuple(self.square + move)
+                    if (new_square[0] > 7 or new_square[0] < 0 or
+                        new_square[1] > 7 or new_square[1] < 0):
+                        raise SquareOutsideBoard
+                    target_piece = chessboard[new_square]
                     legal, move_type = self.assess_attack_on(target_piece)
                     # verboseprint('assessment ==>', legal, move_type, l=2)
                     if attack_mode and move_type == 'king_check':

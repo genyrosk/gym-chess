@@ -37,16 +37,6 @@ class Square:
     LETTERS = list('abcdefgh')
     NUMBERS = list('12345678')
 
-    def __init__(self, *args):
-        if len(args) == 1:
-            self._name = args[0]
-            self.name = self._name
-        elif len(args) == 2:
-            self._coords = (args[0], args[1])
-            self.coords = self._coords
-        else:
-            raise Exception('1 or 2 args pls')
-
     @classmethod
     def coords_to_name(cls, coords):
         return cls.LETTERS[coords[1]] + cls.NUMBERS[coords[0]]
@@ -58,62 +48,23 @@ class Square:
             cls.LETTERS.index(name[0])
         ]
 
-    @property
-    def coords(self):
-        try:
-            return self._coords
-        except AttributeError:
-            self._coords = self.name_to_coords(self.name)
-            return self._coords
-
-    @coords.setter
-    def coords(self, value):
-        if len(value) != 2:
-            raise ValueError('coordinates must be len() == 2 !')
-        if value[0] not in list(range(8)) or value[1] not in list(range(8)):
-            raise SquareOutsideBoard('coordinates must be 2 integers between 0 and 7')
-        self._coords = value
-        self._name = self.coords_to_name(self._coords)
-
-    @property
-    def name(self):
-        try:
-            return self._name
-        except AttributeError:
-            # self._name = self.LETTERS[self._coords[0]] + self.NUMBERS[self._coords[0]]
-            self._name = self.coords_to_name(self._coords)
-            return self._name
-
-    @name.setter
-    def name(self, value):
-        if not isinstance(value, str):
-            raise ValueError('name must be a string dammit !')
-        self._name = value
-        self._coords = self.name_to_coords(self._name)
-
-    def __add__(self, move):
-        assert isinstance(move, list)
-        # verboseprint(f'\t\t---> evaluate {self} + <move {move}>', end='', l=2)
-        row = self.coords[0] + move[0]
-        col = self.coords[1] + move[1]
-        new_coords = [row, col]
-        new_ = Square(*new_coords)
-        # verboseprint(' ==>>', new_, l=2)
-        return new_
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        return f'<{self.name}> {self.coords}'
-
 
 class PlayerMove(namedtuple('PlayerMove',
                 ['player', 'from_', 'to_', 'piece', 'move_type'])):
     def __repr__(self):
         return self.__str__()
     def __str__(self):
-        return f'<{self.piece} {self.from_.name}->{self.to_.name} {self.move_type}>'
+        from_  = Square.coords_to_name(self.from_)
+        to_  = Square.coords_to_name(self.to_)
+        return f'<{self.piece} {from_}->{to_} {self.move_type}>'
+    def __eq__(self, other):
+        return all([
+            self.player == other.player,
+            all(self.from_ == other.from_),
+            all(self.to_ == other.to_),
+            self.piece == other.piece,
+            self.move_type == other.move_type,
+        ])
 
 class Surender:
     def __init__(self, player_color):
@@ -140,19 +91,20 @@ class ChessBoard:
         self.simulated_board = np.zeros((8,8), dtype=np.dtype(object))
         if state:
             for piece in state:
-                self.__setitem__(piece.square.coords, piece.__class__(piece.color))
+                self.__setitem__(tuple(piece.square), piece.__class__(piece.color))
 
-    def __getitem__(self, args):
-        assert isinstance(args, tuple) and len(args) == 2, 'must pass 2 dimensional tuple'
-        simulated = self.simulated_board[args]
+    def __getitem__(self, coords):
+        assert len(coords) == 2, 'value must be 2-dimensional'
+        simulated = self.simulated_board[coords[0], coords[1]]
         if simulated:
             # print('args: ', args, ' =>> simulated:', simulated)
             return simulated
         else:
-            return  self.board[args]
+            return  self.board[coords[0], coords[1]]
 
+    # @profile
     def __setitem__(self, args, value):
-        assert isinstance(args, tuple) and len(args) == 2, 'must pass 2 dimensional tuple'
+        # assert isinstance(args, tuple) and len(args) == 2, 'must pass 2 dimensional tuple'
         self.board[args] = value
         rows, cols = args[0], args[1]
         if isinstance(rows, slice):
@@ -166,7 +118,7 @@ class ChessBoard:
         # set figures' square attribute
         for row in rows:
             for col in cols:
-                self.board[row,col].square = Square(row, col)
+                self.board[row,col].square = np.array([row, col])
                 # x = self.board[row,col]
 
     def __eq__(self, other):
@@ -216,6 +168,7 @@ class ChessBoard:
     def state(self):
         return self.pieces
 
+    # @profile
     def make_move(self, move):
         """
             Args:
@@ -226,24 +179,27 @@ class ChessBoard:
             - castling implementation
             - en-passant
         """
-        piece_copy = deepcopy(move.piece) ## <=== COPY
-        from_ = move.from_.coords
-        to_   = move.to_.coords
-        piece_copy.increment_move_counter()
-        self[from_] = Empty(from_)
-        self[to_] = piece_copy  ## <=== COPY
+        # piece_copy = deepcopy(move.piece) ## <=== COPY
+        # piece_copy = move.piece.copy()
+        from_ = move.from_
+        to_   = move.to_
+        move.piece.increment_move_counter()
+        self[tuple(from_)] = Empty()
+        self[tuple(to_)]   = move.piece  ## <=== COPY
 
     def reset_simulation(self):
         self.simulated_board = np.zeros((8,8), dtype=np.dtype(object))
 
+    # @profile
     def simulate_move(self, move):
         self.reset_simulation()
-        from_ = move.from_.coords
-        to_   = move.to_.coords
-        piece_copy = deepcopy(move.piece)
-        piece_copy.square = Square(*to_)
-        self.simulated_board[from_] = Empty()
-        self.simulated_board[to_] = piece_copy
+        from_ = move.from_
+        to_   = move.to_
+        # piece_copy = deepcopy(move.piece)
+        piece_copy = move.piece.copy()
+        piece_copy.square = to_
+        self.simulated_board[tuple(from_)] = Empty()
+        self.simulated_board[tuple(to_)] = piece_copy
         # TODO:
         # en-passant
         # pawn-queen conversion
@@ -255,6 +211,7 @@ class ChessBoard:
         self.possible_moves = possible_moves
         return possible_moves
 
+    # @profile
     def _get_possible_moves(self, player_color, attack_mode=False):
         # print('!!! attack_mode ->', attack_mode)
         # if attack_mode:
@@ -283,10 +240,13 @@ class ChessBoard:
                 # next_board.make_move(move_obj)
                 # print(next_board)
                 if not attack_mode:
-                    # print(move_obj)
+                    print(move_obj)
                     try:
                         self.simulate_move(move_obj)
+                        print('simulatee')
+                        print(self.simulated_board)
                         _ = self._get_possible_moves(~player_color, attack_mode=True)
+                        # self.show_moves(_)
 
                         # next_board = ChessBoard(self.state)
                         # next_board.make_move(move_obj)
@@ -307,13 +267,14 @@ class ChessBoard:
         d = defaultdict(list)
         for move in moves:
             d[move.piece].append(move)
-        # print(a)
         for piece, moves in d.items():
             # demo_board = deepcopy(self)
             demo_board = ChessBoard(self.state)
             for move in moves:
-                demo_board[move.from_.coords] = demo_board[move.from_.coords].mark()
-                demo_board[move.to_.coords] = demo_board[move.to_.coords].mark_attacked()
+                from_ = tuple(move.from_)
+                to_ = tuple(move.to_)
+                demo_board[from_] = demo_board[from_].mark()
+                demo_board[to_]   = demo_board[to_].mark_attacked()
             print(demo_board)
 
     def get_castling_moves(self, player_color):
@@ -339,29 +300,30 @@ class ChessBoard:
                 continue
             # check if king/rook are on original squares ? (for starting
             # states which are different from default starting state)
-            distance = rook.square.coords[1] - king.square.coords[1]
+            distance = rook.square[1] - king.square[1]
             print('distance:', distance)
             _sign = sign(distance)
-            one_step = king.square + [0, _sign*1]
-            two_step = king.square + [0, _sign*2]
-            if (not isinstance(self[one_step.coords], Empty) and
-                not isinstance(self[two_step.coords], Empty)):
+            step = np.array([0, _sign])
+            one_step = king.square + step
+            two_step = king.square + step*2
+            if (not isinstance(self[one_step], Empty) and
+                not isinstance(self[two_step], Empty)):
                continue
             if king.color == WHITE:
-                a = king.square.coords[0] == 0
-                b = rook.square.coords[0] in [0,7]
-                c = rook.square.coords[1] in [0,7]
+                a = king.square[0] == 0
+                b = rook.square[0] in [0,7]
+                c = rook.square[1] in [0,7]
                 print(a, b, c)
                 continue
             if king.color == WHITE and not (
-                    king.square.coords[0] == 0 and
-                    rook.square.coords[0] in [0,7] and
-                    rook.square.coords[1] in [0,7]):
+                    king.square[0] == 0 and
+                    rook.square[0] in [0,7] and
+                    rook.square[1] in [0,7]):
                 continue
             elif king.color == BLACK and not (
-                    king.square.coords[0] == 7 and
-                    rook.square.coords[0] in [0,7] and
-                    rook.square.coords[1] in [0,7]):
+                    king.square[0] == 7 and
+                    rook.square[0] in [0,7] and
+                    rook.square[1] in [0,7]):
                 continue
             try:
                 # is King checked ?
@@ -463,6 +425,7 @@ class ChessEnv(gym.Env):
         self.total_reward = 0
         self.done = False
         self.game = ChessGame()
+        self.precomputed_moves = None
 
     def seed(self, seed=None):
         pass
@@ -487,27 +450,26 @@ class ChessEnv(gym.Env):
 
         try:
             self.game.make_move(action)
+            black_moves = self.game.get_possible_moves()
+        except PlayerWins as e:
+            self.total_reward += -1
+            self.done = True
         except (DrawByStalemate, DrawByAgreement):
             self.total_reward += 0
-            self.done = True
-        except PlayerWins as e:
-            # dtermine player color
-            print('player wins !')
-            self.total_reward += -1
             self.done = True
 
-        # Copmuter
-        try:
-            moves = self.game.get_possible_moves()
-            self.game.make_move(random.choice(moves))
-        except (DrawByStalemate, DrawByAgreement):
-            self.total_reward += 0
-            self.done = True
-        except PlayerWins as e:
-            # dtermine player color
-            print('player wins !')
-            self.total_reward += -1
-            self.done = True
+        # Computer
+        if not self.done:
+            try:
+                # moves = self.game.get_possible_moves()
+                self.game.make_move(random.choice(black_moves))
+                self.precomputed_moves = self.game.get_possible_moves()
+            except PlayerWins as e:
+                self.total_reward += -1
+                self.done = True
+            except (DrawByStalemate, DrawByAgreement):
+                self.total_reward += 0
+                self.done = True
 
         self.total_steps += 1
         state = self.game.board.board
@@ -532,6 +494,9 @@ class ChessEnv(gym.Env):
         if mode != 'human':
             return outfile
 
+    def get_possible_moves(self):
+        return self.precomputed_moves
+
 # import random
 # g = ChessGame()
 # b = g.board
@@ -546,7 +511,15 @@ class ChessEnv(gym.Env):
 # b.show_moves(moves)
 # b.make_move(random.choice(moves))
 
-
+# import traceback
+# def log_traceback(ex):
+#     tb_lines = traceback.format_exception(ex.__class__, ex, ex.__traceback__)
+#     tb_text = ''.join(tb_lines)
+#     # I'll let you implement the ExceptionLogger class,
+#     # and the timestamping.
+#     print(tb_text)
+#
+#
 # import random
 # import time
 # separator = '<>'*30 + '\n'
@@ -555,14 +528,19 @@ class ChessEnv(gym.Env):
 # for j in range(5):
 #     env = ChessEnv()
 #     for i in range(50):
-#         moves = env.game.get_possible_moves()
-#         state, reward, done, _ = env.step(random.choice(moves))
+#         try:
+#             moves = env.game.get_possible_moves()
+#             state, reward, done, _ = env.step(random.choice(moves))
+#         except Exception as e:
+#             log_traceback(e)
+#             break
 #         if done:
+#             print(f'Game {j} ended in turn {i}')
 #             break
 # e = time.time()
 # print('time', e-s)
 # sys.exit()
-
+#
 # import random
 # import time
 # s = time.time()
@@ -581,7 +559,8 @@ class ChessEnv(gym.Env):
 #             # print('')
 #             # print(b)
 #         except (DrawByAgreement, PlayerWins):
-#             pass
+#             print(f'Game {j} ended in turn {i}')
+#             break
 # e = time.time()
 # print('time', e-s)
 # sys.exit()
@@ -594,13 +573,16 @@ class ChessEnv(gym.Env):
 #     b = g.board
 #     for i in range(50):
 #         input()
-#
+#         print(f'\nTURN {i}')
+#         print('='*30)
+#         print('\n')
 #         try:
 #             # player 1
 #             moves = b.get_possible_moves(WHITE)
 #             print(moves)
 #             m = random.choice(moves)
 #             print('MOVE CHOSEN:', m)
+#             b.show_moves([m])
 #             b.make_move(m)
 #             print('')
 #             print(b)
@@ -609,6 +591,7 @@ class ChessEnv(gym.Env):
 #             print(moves)
 #             m = random.choice(moves)
 #             print('MOVE CHOSEN:', m)
+#             b.show_moves([m])
 #             b.make_move(m)
 #             print('')
 #             print(b)

@@ -1,10 +1,142 @@
-p = Pawn(WHITE, 'a2')
-for move in p.moves:
-    for x in move:
-        print(x)
-for attack in p.attacks:
-    for x in attack:
-        print(x)
+from chess_v5 import *
+import numpy as np
+import os
+import sys
+
+def test_moves():
+    board = ChessBoard()
+    board[4,3] = Rook(WHITE)
+    board[5,3] = Knight(WHITE)
+    board[2,3] = Bishop(BLACK)
+    board[1,2] = Pawn(WHITE)
+    board[0,1] = King(WHITE)
+    print(board)
+
+    moves = board.get_possible_moves(WHITE)
+    board.show_moves(moves)
+
+# test_moves()
+
+
+def test_moves_2():
+    board = ChessBoard()
+    board[4,3] = Rook(WHITE)
+    board[5,3] = Knight(WHITE)
+    board[2,3] = Bishop(BLACK)
+    board[1,2] = Pawn(WHITE)
+    board[0,1] = King(WHITE)
+    print(board)
+
+    pieces = board.get_pieces(WHITE)
+    for piece in pieces:
+        print(f'==== {piece} {piece.square}.{Square.coords_to_name(piece.square)}')
+        moves_iter = piece.generate_moves(self.board, attack_mode)
+
+# test_moves_2()
+
+def test_moves_3():
+    board = ChessBoard()
+    board[4,3] = Rook(WHITE)
+    board[5,3] = Knight(WHITE)
+    board[2,3] = Bishop(BLACK)
+    board[1,2] = Pawn(WHITE)
+    board[0,1] = King(WHITE)
+    player_color = WHITE
+    print(board)
+
+    pieces = board.get_pieces(player_color)
+    for piece in pieces:
+        print(f'Piece coords: {piece} {piece.square}.{Square.coords_to_name(piece.square)}')
+        moves_iter = piece.generate_moves(board, attack_mode=False)
+        possible_moves = []
+        for move, move_type in moves_iter:
+            move_tup = PlayerMove(player_color, piece.square, piece.square + move, piece, move_type)
+            possible_moves.append(move_tup)
+        for m in possible_moves:
+            print(m)
+        board.show_moves(possible_moves)
+
+# test_moves_3()
+# sys.exit()
+
+def test_moves_4():
+    board = ChessBoard()
+    board[4,3] = Rook(WHITE)
+    board[5,3] = Knight(WHITE)
+    board[2,3] = Bishop(BLACK)
+    board[1,2] = Pawn(WHITE)
+    board[0,1] = King(WHITE)
+    player_color = WHITE
+    print(board)
+
+    coords = [1,2]
+    _ = board[1,2]
+    print(_)
+    _ = board[coords]
+    print(_)
+    _ = board[tuple(coords)]
+    print(_)
+    _ = board[np.array(coords)]
+    print(_)
+
+# test_moves_4()
+
+
+def test_moves_5():
+    board = ChessBoard()
+    board[4,3] = Rook(WHITE)
+    board[5,3] = Knight(WHITE)
+    board[2,3] = Bishop(BLACK)
+    board[1,2] = Pawn(WHITE)
+    board[0,1] = King(WHITE)
+    player_color = WHITE
+    print(board)
+
+    coords = np.array([7,7])
+    board[7,7] = Queen(WHITE)
+    board[7,7] = board[7,7].mark()
+    print(board)
+    # board[coords] = Queen(WHITE)
+    # print(board)
+    tup = tuple(coords)
+    board[tup] = Queen(WHITE)
+    board[tup] = board[tup].mark()
+    print(board)
+    # board[np.array(coords)] = Queen(WHITE)
+    # print(board)
+
+# test_moves_5()
+
+def test_moves_6():
+    board = ChessBoard()
+    board[0,1] = King(BLACK)
+    board[0,0] = Rook(BLACK)
+    board[1,1] = Pawn(BLACK)
+    board[1,0] = Pawn(BLACK)
+    board[0,2] = Knight(BLACK)
+    board[2,3] = Bishop(WHITE)
+    print(board)
+
+    moves = board.get_possible_moves(BLACK)
+    board.show_moves(moves)
+
+# test_moves_6()
+
+
+
+def test_moves_7():
+    board = ChessBoard()
+    board[6,4] = King(BLACK)
+    board[4,3] = Bishop(BLACK)
+    board[3,4] = King(WHITE)
+    print(board)
+
+    moves = board.get_possible_moves(WHITE)
+    print(moves)
+    board.show_moves(moves)
+
+test_moves_7()
+
 
 #
 # TESTS:
