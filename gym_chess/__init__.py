@@ -1,15 +1,29 @@
 from gym.envs.registration import register
 
 register(
-	id='ChessVsRandomBot-v0',
-	entry_point='gym_chess.envs:ChessEnv',
-	kwargs={'opponent' : 'random'},
+    id="ChessVsRandomBot-v0",
+    entry_point="gym_chess.envs:ChessEnv",
+    kwargs={"opponent": "random"},
 )
 
 register(
-	id='ChessVsSelf-v0',
-	entry_point='gym_chess.envs:ChessEnv',
-	kwargs={'opponent' : 'none'},
-	# max_episode_steps=100,
-	# reward_threshold=.0, # optimum = .0
+    id="ChessVsSelf-v0",
+    entry_point="gym_chess.envs:ChessEnv",
+    kwargs={"opponent": "none"},
+    # max_episode_steps=100,
+    # reward_threshold=.0, # optimum = .0
+)
+
+register(
+    id="ChessVsRandomBot-v2",
+    entry_point="gym_chess.envs:ChessEnvV2",
+    kwargs={"opponent": "random"},
+)
+
+register(
+    id="ChessVsSelf-v2",
+    entry_point="gym_chess.envs:ChessEnvV2",
+    kwargs={"opponent": "none"},
+    # max_episode_steps=100,
+    # reward_threshold=.0, # optimum = .0
 )
