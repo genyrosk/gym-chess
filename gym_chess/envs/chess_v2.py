@@ -449,13 +449,18 @@ class ChessEnvV2(gym.Env):
         # breakpoint()
         moves = []
         steps = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]
-        for step in steps:
-            square = coords + np.array(step, dtype=np.int8)
-            if attack:
+
+        if attack:
+            for step in steps:
+                square = coords + np.array(step, dtype=np.int8)
                 if self.king_attack(player, square):
                     moves.append([coords, square])
-            else:
-                if self.king_move(player, square):
+        else:
+            opponent_player = self.get_other_player(player)
+            opponent_attacked_squares = self.get_squares_attacked_by_player(opponent_player)
+            for step in steps:
+                square = coords + np.array(step, dtype=np.int8)
+                if self.king_move(player, square, opponent_attacked_squares):
                     moves.append([coords, square])
         return moves
 
@@ -583,7 +588,7 @@ class ChessEnvV2(gym.Env):
         moves = []
         return moves
 
-    def king_move(self, player, square):
+    def king_move(self, player, square, squares_under_attack):
         """
         return squares to which the king can move,
         i.e. unattacked squares that can be:
@@ -592,12 +597,9 @@ class ChessEnvV2(gym.Env):
         If opponent king is encountered, then there's a problem...
         => return <bool> is_playable
         """
-        opponent_player = self.get_other_player(player)
-        opponent_attacked_squares = self.get_squares_attacked_by_player(opponent_player)
-
         if not ChessEnvV2.square_is_on_board(square):
             return False
-        elif ChessEnvV2.move_is_in_list(square, opponent_attacked_squares):
+        elif ChessEnvV2.move_is_in_list(square, squares_under_attack):
             return False
         elif self.is_piece_from_player(player, square):
             return False
