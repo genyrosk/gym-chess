@@ -256,11 +256,11 @@ class ChessEnv(gym.Env):
         self.state["on_move"] = 1
 
         # Board
-        board = [["R1", ".", ".", "K", ".", ".", ".", "R2"]]
-        board += [["P1", ".", ".", ".", ".", ".", ".", "P8"]]
+        board = [["R1", "N1", "B1", "K", "Q", "B2", "N2", "R2"]]
+        board += [["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"]]
         board += [["."] * 8] * 4
-        board += [["p1", ".", ".", ".", ".", ".", ".", "p8"]]
-        board += [["r1", ".", ".", "k", ".", ".", ".", "r2"]]
+        board += [["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"]]
+        board += [["r1", "n1", "b1", "k", "q", "b2", "n2", "r2"]]
         self.state["board"] = np.array(
             [[pieces_to_ids[x] for x in row] for row in board]
         )
