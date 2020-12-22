@@ -31,11 +31,11 @@ for e in range(num_episodes):
 end = time.time()
 diff = end - start
 
-print('Total time (s)', diff)
-print('Total episodes', num_episodes)
-print('Total steps', total_steps)
-print('Time per episode (s)', diff / num_episodes)
-print('Time per step (s)', diff / total_steps)
+print("Total time (s)", diff)
+print("Total episodes", num_episodes)
+print("Total steps", total_steps)
+print("Time per episode (s)", diff / num_episodes)
+print("Time per step (s)", diff / total_steps)
 
 # Total time (s) 21.827413082122803
 # Total episodes 10

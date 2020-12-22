@@ -457,7 +457,9 @@ class ChessEnvV2(gym.Env):
                     moves.append([coords, square])
         else:
             opponent_player = self.get_other_player(player)
-            opponent_attacked_squares = self.get_squares_attacked_by_player(opponent_player)
+            opponent_attacked_squares = self.get_squares_attacked_by_player(
+                opponent_player
+            )
             for step in steps:
                 square = coords + np.array(step, dtype=np.int8)
                 if self.king_move(player, square, opponent_attacked_squares):
