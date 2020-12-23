@@ -1,12 +1,10 @@
 import os
 import sys
-
-# import time
-
+from collections import defaultdict
 from copy import copy
+from dataclasses import dataclass
 from six import StringIO
 from pprint import pprint
-from dataclasses import dataclass
 
 import gym
 from gym import spaces, error, utils
@@ -50,12 +48,6 @@ QUEEN_VALUE = 10
 
 
 @dataclass
-class Castle:
-    color: str
-    side: str
-
-
-@dataclass
 class Piece:
     id: int
     icon: str
@@ -85,10 +77,16 @@ ID_TO_ICON = {piece.id: piece.icon for piece in PIECES}
 ID_TO_TYPE = {piece.id: piece.type for piece in PIECES}
 ID_TO_VALUE = {piece.id: piece.value for piece in PIECES}
 
-CASTLE_KINGS_SIDE_WHITE = Castle(color=WHITE, side=KINGS_SIDE)
-CASTLE_QUEENS_SIDE_WHITE = Castle(color=WHITE, side=QUEENS_SIDE)
-CASTLE_KINGS_SIDE_BLACK = Castle(color=BLACK, side=KINGS_SIDE)
-CASTLE_QUEENS_SIDE_BLACK = Castle(color=BLACK, side=QUEENS_SIDE)
+CASTLE_KINGS_SIDE_WHITE = "castle_king_side_white"
+CASTLE_QUEENS_SIDE_WHITE = "cast_queen_side_white"
+CASTLE_KINGS_SIDE_BLACK = "castle_king_side_black"
+CASTLE_QUEENS_SIDE_BLACK = "cast_queen_side_black"
+CASTLE_MOVES = [
+    CASTLE_KINGS_SIDE_WHITE,
+    CASTLE_QUEENS_SIDE_WHITE,
+    CASTLE_KINGS_SIDE_BLACK,
+    CASTLE_QUEENS_SIDE_BLACK,
+]
 
 DEFAULT_BOARD = np.array(
     [
@@ -103,6 +101,10 @@ DEFAULT_BOARD = np.array(
     ],
     dtype=np.int8,
 )
+
+
+def highlight(string, background="white", color="gray"):
+    return utils.colorize(utils.colorize(string, color), background, highlight=True)
 
 
 # AGENT POLICY
@@ -144,15 +146,6 @@ class ChessEnvV2(gym.Env):
         self.player_2 = self.get_other_player(player_color)
         self.opponent = opponent  # define opponent
 
-        # variables
-        self.state = None
-        self.prev_state = None
-        self.done = False
-        self.current_player = None
-        self.saved_states = {}
-        self.repetitions = 0
-        self.move_count = 0
-
         # reset and build state
         self.seed()
         self.reset()
@@ -185,11 +178,17 @@ class ChessEnvV2(gym.Env):
         self.saved_states = {}
         self.repetitions = 0  # 3 repetitions ==> DRAW
         self.move_count = 0
-        # TODO: Let the opponent play if it's not the agent's turn
-        # if self.player != BLACK:
-        #     a = self.opponent_policy(self.state)
-        #     HexEnv.make_move(self.state, a, HexEnv.BLACK)
-        #     self.to_play = HexEnv.WHITE
+        self.previous_action = None
+        self.white_king_castle_possible = True
+        self.white_queen_castle_possible = True
+        self.black_king_castle_possible = True
+        self.black_queen_castle_possible = True
+        # If player chooses black, make white openent move first
+        if self.player == BLACK:
+            opponent_move = self.opponent_policy(self)
+            opponent_action = self.move_to_action(opponent_move)
+            # make move
+            self.state, _, _ = self.player_move(opponent_action)
         return self.state
 
     def step(self, action):
@@ -230,6 +229,7 @@ class ChessEnvV2(gym.Env):
 
         # make move
         self.state, reward, self.done = self.player_move(action)
+        self.previous_action = action
         self.switch_player()
 
         if self.done:
@@ -241,6 +241,7 @@ class ChessEnvV2(gym.Env):
             opponent_action = self.move_to_action(opponent_move)
             # make move
             self.state, opp_reward, self.done = self.player_move(opponent_action)
+            self.previous_action = action
             reward -= opp_reward
             self.switch_player()
 
@@ -270,6 +271,12 @@ class ChessEnvV2(gym.Env):
     @property
     def current_player_is_black(self):
         return not self.current_player_is_white
+
+    def player_can_castle(self, player):
+        if player == WHITE:
+            return self.white_king_castle_possible and self.white_queen_castle_possible
+        else:
+            return self.black_king_castle_possible and self.black_queen_castle_possible
 
     def get_other_player(self, player):
         if player == WHITE:
@@ -309,30 +316,84 @@ class ChessEnvV2(gym.Env):
 
         # TODO: implement castle move
         #
+        if type(move) is str and move in CASTLE_MOVES and False:
+            new_state = self.run_castle_move(new_state, move)
+        elif type(move) is list or tuple:
+            # Classic move
+            _from, _to = move
+            piece_to_move = copy(self.state[_from[0], _from[1]])
+            captured_piece = copy(self.state[_to[0], _to[1]])
+            assert piece_to_move, f"Bad move: {move} - piece is empty"
+            new_state[_from[0], _from[1]] = 0
+            new_state[_to[0], _to[1]] = piece_to_move
 
-        # Classic move
-        _from, _to = move
-        piece_to_move = copy(self.state[_from[0], _from[1]])
-        captured_piece = copy(self.state[_to[0], _to[1]])
-        assert piece_to_move, f"Bad move: {move} - piece is empty"
-        new_state[_from[0], _from[1]] = 0
-        new_state[_to[0], _to[1]] = piece_to_move
+            # Pawn becomes Queen
+            # TODO: allow player to choose the piece into which the pawn converts
+            if ID_TO_TYPE[piece_to_move] == PAWN:
+                if (self.current_player_is_white and _to[0] == 7) or (
+                    self.current_player_is_black and _to[0] == 0
+                ):
+                    new_state[_to[0], _to[1]] = QUEEN_ID * self.player_to_int(
+                        self.current_player
+                    )
+                    reward += CONVERT_PAWN_TO_QUEEN_REWARD
 
-        # Pawn becomes Queen
-        # TODO: allow player to choose the piece into which the pawn converts
-        if ID_TO_TYPE[piece_to_move] == PAWN:
-            if (self.current_player_is_white and _to[0] == 7) or (
-                self.current_player_is_black and _to[0] == 0
-            ):
-                new_state[_to[0], _to[1]] = QUEEN_ID * self.player_to_int(
-                    self.current_player
-                )
-                reward += CONVERT_PAWN_TO_QUEEN_REWARD
+            # Keep track if castling is still possible
+            if self.player_can_castle(self.current_player):
+                if piece_to_move == KING_ID:
+                    if self.current_player_is_white:
+                        self.white_king_castle_possible = False
+                        self.white_queen_castle_possible = False
+                    else:
+                        self.black_king_castle_possible = False
+                        self.black_queen_castle_possible = False
+                elif piece_to_move == ROOK_ID:
+                    if _from[1] == 0:
+                        if self.current_player_is_white:
+                            self.white_queen_castle_possible = False
+                        else:
+                            self.black_queen_castle_possible = False
+                    elif _from[1] == 7:
+                        if self.current_player_is_white:
+                            self.white_king_castle_possible = False
+                        else:
+                            self.black_king_castle_possible = False
 
-        # Reward
-        reward += ID_TO_VALUE[captured_piece]
+            # Reward
+            reward += ID_TO_VALUE[captured_piece]
 
         return new_state, reward
+
+    def run_castle_move(self, state, move):
+        if move == CASTLE_KINGS_SIDE_WHITE:
+            state[7, 4] = EMPTY_SQUARE_ID
+            state[7, 5] = ROOK_ID
+            state[7, 6] = KING_ID
+            state[7, 7] = EMPTY_SQUARE_ID
+        elif move == CASTLE_QUEENS_SIDE_WHITE:
+            state[7, 0] = EMPTY_SQUARE_ID
+            state[7, 1] = EMPTY_SQUARE_ID
+            state[7, 2] = KING_ID
+            state[7, 3] = ROOK_ID
+            state[7, 4] = EMPTY_SQUARE_ID
+        elif move == CASTLE_KINGS_SIDE_BLACK:
+            state[0, 4] = EMPTY_SQUARE_ID
+            state[0, 5] = ROOK_ID
+            state[0, 6] = KING_ID
+            state[0, 7] = EMPTY_SQUARE_ID
+        elif move == CASTLE_QUEENS_SIDE_BLACK:
+            state[0, 0] = EMPTY_SQUARE_ID
+            state[0, 1] = EMPTY_SQUARE_ID
+            state[0, 2] = KING_ID
+            state[0, 3] = ROOK_ID
+            state[0, 4] = EMPTY_SQUARE_ID
+        if self.current_player_is_white:
+            self.white_king_castle_possible = False
+            self.white_queen_castle_possible = False
+        else:
+            self.black_king_castle_possible = False
+            self.black_queen_castle_possible = False
+        return state
 
     def state_to_grid(self):
         grid = [[f" {ID_TO_ICON[square]} " for square in row] for row in self.state]
@@ -365,21 +426,40 @@ class ChessEnvV2(gym.Env):
     def render_moves(self, moves, mode="human"):
         grid = self.state_to_grid()
         for move in moves:
+            if type(move) is str and move in CASTLE_MOVES:
+                if move == CASTLE_QUEENS_SIDE_WHITE:
+                    grid[7][0] = highlight(grid[7][0], background="white")
+                    grid[7][1] = highlight(" >>", background="green")
+                    grid[7][2] = highlight("> <", background="green")
+                    grid[7][3] = highlight("<< ", background="green")
+                    grid[7][4] = highlight(grid[7][4], background="white")
+                elif move == CASTLE_KINGS_SIDE_WHITE:
+                    grid[7][4] = highlight(grid[7][4], background="white")
+                    grid[7][5] = highlight(" >>", background="green")
+                    grid[7][6] = highlight("<< ", background="green")
+                    grid[7][7] = highlight(grid[7][7], background="white")
+                elif move == CASTLE_QUEENS_SIDE_BLACK:
+                    grid[0][0] = highlight(grid[0][0], background="white")
+                    grid[0][1] = highlight(" >>", background="green")
+                    grid[0][2] = highlight("> <", background="green")
+                    grid[0][3] = highlight("<< ", background="green")
+                    grid[0][4] = highlight(grid[0][4], background="white")
+                elif move == CASTLE_KINGS_SIDE_BLACK:
+                    grid[0][4] = highlight(grid[0][4], background="white")
+                    grid[0][5] = highlight(" >>", background="green")
+                    grid[0][6] = highlight("<< ", background="green")
+                    grid[0][7] = highlight(grid[0][7], background="white")
+                continue
+
             x0, y0 = move[0][0], move[0][1]
             x1, y1 = move[1][0], move[1][1]
             if len(grid[x0][y0]) < 4:
-                grid[x0][y0] = utils.colorize(
-                    utils.colorize(grid[x0][y0], "gray"), "white", highlight=True
-                )
+                grid[x0][y0] = highlight(grid[x0][y0], background="white")
             if len(grid[x1][y1]) < 4:
                 if self.state[x1, y1]:
-                    grid[x1][y1] = utils.colorize(
-                        utils.colorize(grid[x1][y1], "gray"), "red", highlight=True
-                    )
+                    grid[x1][y1] = highlight(grid[x1][y1], background="red")
                 else:
-                    grid[x1][y1] = utils.colorize(
-                        utils.colorize(grid[x1][y1], "gray"), "green", highlight=True
-                    )
+                    grid[x1][y1] = highlight(grid[x1][y1], background="green")
         self.render_grid(grid, mode=mode)
 
     def move_to_action(self, move):
@@ -415,9 +495,19 @@ class ChessEnvV2(gym.Env):
         moves = self.get_possible_moves(player=self.current_player)
         return [self.move_to_action(move) for move in moves]
 
-    def get_possible_moves(self, player=None, attack=False):
+    def get_possible_moves(self, player=None, attack=False, skip_pawns=False):
         if player is None:
             player = self.current_player
+
+        squares_under_attack = []
+        if not attack:
+            opponent_player = self.get_other_player(player)
+            squares_under_attack = self.get_squares_attacked_by_player(opponent_player)
+
+        squares_under_attack_hashmap = defaultdict(lambda: None)
+        for sq in squares_under_attack:
+            squares_under_attack_hashmap[tuple(sq)] = True
+
         moves = []
         for coords, piece_id in np.ndenumerate(self.state):
             coords = np.array(coords, dtype=np.int8)
@@ -429,7 +519,12 @@ class ChessEnvV2(gym.Env):
             # breakpoint()
             piece_type = ID_TO_TYPE[piece_id]
             if piece_type == KING:
-                moves += self.king_moves(player, coords, attack=attack)
+                moves += self.king_moves(
+                    player,
+                    coords,
+                    attack=attack,
+                    squares_under_attack_hashmap=squares_under_attack_hashmap,
+                )
             elif piece_type == QUEEN:
                 moves += self.queen_moves(player, coords, attack=attack)
             elif piece_type == ROOK:
@@ -438,13 +533,24 @@ class ChessEnvV2(gym.Env):
                 moves += self.bishop_moves(player, coords, attack=attack)
             elif piece_type == KNIGHT:
                 moves += self.knight_moves(player, coords, attack=attack)
-            elif piece_type == PAWN:
+            elif piece_type == PAWN and not skip_pawns:
                 moves += self.pawn_moves(player, coords, attack=attack)
 
         # TODO: castle moves
+        if not attack and self.player_can_castle(player):
+            moves += self.castle_moves(
+                player, squares_under_attack_hashmap=squares_under_attack_hashmap
+            )
+
         return moves
 
-    def king_moves(self, player, coords, attack=False):
+    def king_moves(
+        self,
+        player,
+        coords,
+        attack=False,
+        squares_under_attack_hashmap=defaultdict(lambda: None),
+    ):
         """KING MOVES"""
         # breakpoint()
         moves = []
@@ -456,13 +562,9 @@ class ChessEnvV2(gym.Env):
                 if self.king_attack(player, square):
                     moves.append([coords, square])
         else:
-            opponent_player = self.get_other_player(player)
-            opponent_attacked_squares = self.get_squares_attacked_by_player(
-                opponent_player
-            )
             for step in steps:
                 square = coords + np.array(step, dtype=np.int8)
-                if self.king_move(player, square, opponent_attacked_squares):
+                if self.king_move(player, square, squares_under_attack_hashmap):
                     moves.append([coords, square])
         return moves
 
@@ -586,11 +688,79 @@ class ChessEnvV2(gym.Env):
             #
         return moves
 
-    def castle_moves(self):
+    def castle_moves(
+        self, player, squares_under_attack_hashmap=defaultdict(lambda: None)
+    ):
         moves = []
+        if player == WHITE:
+            # CASTLE_QUEENS_SIDE_WHITE:
+            rook = (7, 0)
+            empty_3 = (7, 1)
+            empty_2 = (7, 2)
+            empty_1 = (7, 3)
+            king = (7, 4)
+            if (
+                self.state[rook] == ROOK_ID
+                and self.state[empty_3] == EMPTY_SQUARE_ID
+                and self.state[empty_2] == EMPTY_SQUARE_ID
+                and self.state[empty_1] == EMPTY_SQUARE_ID
+                and self.state[king] == KING_ID
+                and not squares_under_attack_hashmap[king]
+                and not squares_under_attack_hashmap[empty_1]
+                and not squares_under_attack_hashmap[empty_2]
+            ):
+                moves.append(CASTLE_QUEENS_SIDE_WHITE)
+            # CASTLE_KINGS_SIDE_WHITE
+            king = (7, 4)
+            empty_1 = (7, 5)
+            empty_2 = (7, 6)
+            rook = (7, 7)
+            if (
+                self.state[king] == KING_ID
+                and self.state[empty_1] == EMPTY_SQUARE_ID
+                and self.state[empty_2] == EMPTY_SQUARE_ID
+                and self.state[rook] == ROOK_ID
+                and not squares_under_attack_hashmap[king]
+                and not squares_under_attack_hashmap[empty_1]
+                and not squares_under_attack_hashmap[empty_2]
+            ):
+                moves.append(CASTLE_KINGS_SIDE_WHITE)
+        else:
+            # CASTLE_QUEENS_SIDE_BLACK:
+            rook = (0, 0)
+            empty_3 = (0, 1)
+            empty_2 = (0, 2)
+            empty_1 = (0, 3)
+            king = (0, 4)
+            if (
+                self.state[rook] == ROOK_ID
+                and self.state[empty_3] == EMPTY_SQUARE_ID
+                and self.state[empty_2] == EMPTY_SQUARE_ID
+                and self.state[empty_1] == EMPTY_SQUARE_ID
+                and self.state[king] == KING_ID
+                and not squares_under_attack_hashmap[king]
+                and not squares_under_attack_hashmap[empty_1]
+                and not squares_under_attack_hashmap[empty_2]
+            ):
+                moves.append(CASTLE_QUEENS_SIDE_BLACK)
+            # CASTLE_KINGS_SIDE_BLACK:
+            king = (0, 4)
+            empty_1 = (0, 5)
+            empty_2 = (0, 6)
+            rook = (0, 7)
+            if (
+                self.state[king] == KING_ID
+                and self.state[empty_1] == EMPTY_SQUARE_ID
+                and self.state[empty_2] == EMPTY_SQUARE_ID
+                and self.state[rook] == ROOK_ID
+                and not squares_under_attack_hashmap[king]
+                and not squares_under_attack_hashmap[empty_1]
+                and not squares_under_attack_hashmap[empty_2]
+            ):
+                moves.append(CASTLE_KINGS_SIDE_BLACK)
         return moves
 
-    def king_move(self, player, square, squares_under_attack):
+    def king_move(self, player, square, squares_under_attack_hashmap):
         """
         return squares to which the king can move,
         i.e. unattacked squares that can be:
@@ -601,7 +771,7 @@ class ChessEnvV2(gym.Env):
         """
         if not ChessEnvV2.square_is_on_board(square):
             return False
-        elif ChessEnvV2.move_is_in_list(square, squares_under_attack):
+        elif squares_under_attack_hashmap[tuple(square)]:
             return False
         elif self.is_piece_from_player(player, square):
             return False
@@ -713,13 +883,6 @@ class ChessEnvV2(gym.Env):
 
     # TODO: implement resignation action parsing
     def is_resignation(self, action):
-        return False
-
-    @staticmethod
-    def move_is_in_list(move, move_list):
-        for m in move_list:
-            if np.all(move == m):
-                return True
         return False
 
     @staticmethod
