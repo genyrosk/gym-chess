@@ -27,6 +27,13 @@ BISHOP = "bishop"
 KNIGHT = "knight"
 PAWN = "pawn"
 
+KING_DESC = 'K'
+QUEEN_DESC = 'Q'
+ROOK_DESC = 'R'
+BISHOP_DESC = 'B'
+KNIGHT_DESC = 'N'
+PAWN_DESC = ''
+
 WHITE_ID = 1
 BLACK_ID = -1
 
@@ -51,31 +58,33 @@ QUEEN_VALUE = 10
 class Piece:
     id: int
     icon: str
+    desc: str
     type: str
     color: str
     value: float
 
 
 PIECES = [
-    Piece(icon="♙", color=BLACK, type=PAWN, id=-PAWN_ID, value=PAWN_VALUE),
-    Piece(icon="♘", color=BLACK, type=KNIGHT, id=-KNIGHT_ID, value=KNIGHT_VALUE),
-    Piece(icon="♗", color=BLACK, type=BISHOP, id=-BISHOP_ID, value=BISHOP_VALUE),
-    Piece(icon="♖", color=BLACK, type=ROOK, id=-ROOK_ID, value=ROOK_VALUE),
-    Piece(icon="♕", color=BLACK, type=QUEEN, id=-QUEEN_ID, value=QUEEN_VALUE),
-    Piece(icon="♔", color=BLACK, type=KING, id=-KING_ID, value=0),
-    Piece(icon=".", color=None, type=None, id=EMPTY_SQUARE_ID, value=0),
-    Piece(icon="♚", color=WHITE, type=KING, id=KING_ID, value=0),
-    Piece(icon="♛", color=WHITE, type=QUEEN, id=QUEEN_ID, value=QUEEN_VALUE),
-    Piece(icon="♜", color=WHITE, type=ROOK, id=ROOK_ID, value=ROOK_VALUE),
-    Piece(icon="♝", color=WHITE, type=BISHOP, id=BISHOP_ID, value=BISHOP_VALUE),
-    Piece(icon="♞", color=WHITE, type=KNIGHT, id=KNIGHT_ID, value=KNIGHT_VALUE),
-    Piece(icon="♟", color=WHITE, type=PAWN, id=PAWN_ID, value=PAWN_VALUE),
+    Piece(icon="♙", desc=PAWN_DESC, color=BLACK, type=PAWN, id=-PAWN_ID, value=PAWN_VALUE),
+    Piece(icon="♘", desc=KNIGHT_DESC, color=BLACK, type=KNIGHT, id=-KNIGHT_ID, value=KNIGHT_VALUE),
+    Piece(icon="♗", desc=BISHOP_DESC, color=BLACK, type=BISHOP, id=-BISHOP_ID, value=BISHOP_VALUE),
+    Piece(icon="♖", desc=ROOK_DESC, color=BLACK, type=ROOK, id=-ROOK_ID, value=ROOK_VALUE),
+    Piece(icon="♕", desc=QUEEN_DESC, color=BLACK, type=QUEEN, id=-QUEEN_ID, value=QUEEN_VALUE),
+    Piece(icon="♔", desc=KING_DESC, color=BLACK, type=KING, id=-KING_ID, value=0),
+    Piece(icon=".", desc='', color=None, type=None, id=EMPTY_SQUARE_ID, value=0),
+    Piece(icon="♚", desc=KING_DESC, color=WHITE, type=KING, id=KING_ID, value=0),
+    Piece(icon="♛", desc=QUEEN_DESC, color=WHITE, type=QUEEN, id=QUEEN_ID, value=QUEEN_VALUE),
+    Piece(icon="♜", desc=ROOK_DESC, color=WHITE, type=ROOK, id=ROOK_ID, value=ROOK_VALUE),
+    Piece(icon="♝", desc=BISHOP_DESC, color=WHITE, type=BISHOP, id=BISHOP_ID, value=BISHOP_VALUE),
+    Piece(icon="♞", desc=KNIGHT_DESC, color=WHITE, type=KNIGHT, id=KNIGHT_ID, value=KNIGHT_VALUE),
+    Piece(icon="♟", desc=PAWN_DESC, color=WHITE, type=PAWN, id=PAWN_ID, value=PAWN_VALUE),
 ]
 
 ID_TO_COLOR = {piece.id: piece.color for piece in PIECES}
 ID_TO_ICON = {piece.id: piece.icon for piece in PIECES}
 ID_TO_TYPE = {piece.id: piece.type for piece in PIECES}
 ID_TO_VALUE = {piece.id: piece.value for piece in PIECES}
+ID_TO_DESC = {piece.id: piece.desc for piece in PIECES}
 
 CASTLE_KINGS_SIDE_WHITE = "castle_king_side_white"
 CASTLE_QUEENS_SIDE_WHITE = "cast_queen_side_white"
@@ -397,12 +406,13 @@ class ChessEnvV2(gym.Env):
         return grid
 
     def render_grid(self, grid, mode="human"):
-        outfile = StringIO() if mode == "ansi" else sys.stdout
+        outfile = sys.stdout if mode == "human" else StringIO()
         outfile.write("    ")
         outfile.write("-" * 25)
         outfile.write("\n")
+        rows = '87654321'
         for i, row in enumerate(grid):
-            outfile.write(f" {i+1} | ")
+            outfile.write(f" {rows[i]} | ")
             for square in row:
                 outfile.write(square)
             outfile.write("|\n")
@@ -410,15 +420,17 @@ class ChessEnvV2(gym.Env):
         outfile.write("-" * 25)
         outfile.write("\n      a  b  c  d  e  f  g  h ")
         outfile.write("\n")
-        outfile.write("\n")
 
+        if mode == "string":
+            return outfile.getvalue()
         if mode != "human":
             return outfile
 
     def render(self, mode="human"):
         """Render the playing board"""
         grid = self.state_to_grid()
-        self.render_grid(grid, mode=mode)
+        out = self.render_grid(grid, mode=mode)
+        return out
 
     def render_moves(self, moves, mode="human"):
         grid = self.state_to_grid()
@@ -457,7 +469,7 @@ class ChessEnvV2(gym.Env):
                     grid[x1][y1] = highlight(grid[x1][y1], background="red")
                 else:
                     grid[x1][y1] = highlight(grid[x1][y1], background="green")
-        self.render_grid(grid, mode=mode)
+        return self.render_grid(grid, mode=mode)
 
     def move_to_action(self, move):
         if move == CASTLE_KINGS_SIDE_WHITE:
@@ -487,6 +499,22 @@ class ChessEnvV2(gym.Env):
         x0, y0 = _from // 8, _from % 8
         x1, y1 = _to // 8, _to % 8
         return [np.array([x0, y0], dtype=np.int8), np.array([x1, y1], dtype=np.int8)]
+
+    def move_to_string(self, move):
+        if move in [CASTLE_KINGS_SIDE_WHITE, CASTLE_KINGS_SIDE_BLACK]:
+            return 'O-O'
+        elif move in [CASTLE_QUEENS_SIDE_WHITE, CASTLE_QUEENS_SIDE_BLACK]:
+            return 'O-O-O'
+        _from, _to = move
+        rows = list(reversed('12345678'))
+        cols = 'abcdefgh'
+        piece_id = self.state[_from[0], _from[1]]
+        piece_desc = ID_TO_DESC[piece_id]
+        capture = self.state[_to[0], _to[1]] != 0
+        _from_str = cols[_from[1]] + rows[_from[0]]
+        _to_str = cols[_to[1]] + rows[_to[0]]
+        string = f"{piece_desc}{_from_str}{'x' if capture else ''}{_to_str}"
+        return string
 
     def get_possible_actions(self):
         moves = self.get_possible_moves(player=self.current_player)
