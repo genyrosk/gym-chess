@@ -27,12 +27,12 @@ BISHOP = "bishop"
 KNIGHT = "knight"
 PAWN = "pawn"
 
-KING_DESC = 'K'
-QUEEN_DESC = 'Q'
-ROOK_DESC = 'R'
-BISHOP_DESC = 'B'
-KNIGHT_DESC = 'N'
-PAWN_DESC = ''
+KING_DESC = "K"
+QUEEN_DESC = "Q"
+ROOK_DESC = "R"
+BISHOP_DESC = "B"
+KNIGHT_DESC = "N"
+PAWN_DESC = ""
 
 WHITE_ID = 1
 BLACK_ID = -1
@@ -71,7 +71,7 @@ PIECES = [
     Piece(icon="♖", desc=ROOK_DESC, color=BLACK, type=ROOK, id=-ROOK_ID, value=ROOK_VALUE),
     Piece(icon="♕", desc=QUEEN_DESC, color=BLACK, type=QUEEN, id=-QUEEN_ID, value=QUEEN_VALUE),
     Piece(icon="♔", desc=KING_DESC, color=BLACK, type=KING, id=-KING_ID, value=0),
-    Piece(icon=".", desc='', color=None, type=None, id=EMPTY_SQUARE_ID, value=0),
+    Piece(icon=".", desc="", color=None, type=None, id=EMPTY_SQUARE_ID, value=0),
     Piece(icon="♚", desc=KING_DESC, color=WHITE, type=KING, id=KING_ID, value=0),
     Piece(icon="♛", desc=QUEEN_DESC, color=WHITE, type=QUEEN, id=QUEEN_ID, value=QUEEN_VALUE),
     Piece(icon="♜", desc=ROOK_DESC, color=WHITE, type=ROOK, id=ROOK_ID, value=ROOK_VALUE),
@@ -339,9 +339,7 @@ class ChessEnvV2(gym.Env):
                 if (self.current_player_is_white and _to[0] == 7) or (
                     self.current_player_is_black and _to[0] == 0
                 ):
-                    new_state[_to[0], _to[1]] = QUEEN_ID * self.player_to_int(
-                        self.current_player
-                    )
+                    new_state[_to[0], _to[1]] = QUEEN_ID * self.player_to_int(self.current_player)
                     reward += CONVERT_PAWN_TO_QUEEN_REWARD
 
             # Keep track if castling is still possible
@@ -410,7 +408,7 @@ class ChessEnvV2(gym.Env):
         outfile.write("    ")
         outfile.write("-" * 25)
         outfile.write("\n")
-        rows = '87654321'
+        rows = "87654321"
         for i, row in enumerate(grid):
             outfile.write(f" {rows[i]} | ")
             for square in row:
@@ -502,12 +500,12 @@ class ChessEnvV2(gym.Env):
 
     def move_to_string(self, move):
         if move in [CASTLE_KINGS_SIDE_WHITE, CASTLE_KINGS_SIDE_BLACK]:
-            return 'O-O'
+            return "O-O"
         elif move in [CASTLE_QUEENS_SIDE_WHITE, CASTLE_QUEENS_SIDE_BLACK]:
-            return 'O-O-O'
+            return "O-O-O"
         _from, _to = move
-        rows = list(reversed('12345678'))
-        cols = 'abcdefgh'
+        rows = list(reversed("12345678"))
+        cols = "abcdefgh"
         piece_id = self.state[_from[0], _from[1]]
         piece_desc = ID_TO_DESC[piece_id]
         capture = self.state[_to[0], _to[1]] != 0
@@ -683,9 +681,9 @@ class ChessEnvV2(gym.Env):
 
         if attack:
             for square in attack_squares:
-                if ChessEnvV2.square_is_on_board(
-                    square
-                ) and not self.is_king_from_player(player, square):
+                if ChessEnvV2.square_is_on_board(square) and not self.is_king_from_player(
+                    player, square
+                ):
                     moves.append([coords, square])
         else:
             # moves only to empty squares
@@ -696,26 +694,23 @@ class ChessEnvV2(gym.Env):
             x, y = two_step_square
             # breakpoint()
             if ChessEnvV2.square_is_on_board(two_step_square) and (
-                (player == WHITE and coords[0] == 6)
-                or (player == BLACK and coords[0] == 1)
+                (player == WHITE and coords[0] == 6) or (player == BLACK and coords[0] == 1)
             ):
                 if self.state[x, y] == 0:
                     moves.append([coords, two_step_square])
 
             # attacks only opponent's pieces
             for square in attack_squares:
-                if ChessEnvV2.square_is_on_board(
-                    square
-                ) and self.is_piece_from_other_player(player, square):
+                if ChessEnvV2.square_is_on_board(square) and self.is_piece_from_other_player(
+                    player, square
+                ):
                     moves.append([coords, square])
 
             # TODO: implement en-passant pawn capture
             #
         return moves
 
-    def castle_moves(
-        self, player, squares_under_attack_hashmap=defaultdict(lambda: None)
-    ):
+    def castle_moves(self, player, squares_under_attack_hashmap=defaultdict(lambda: None)):
         moves = []
         if player == WHITE:
             # CASTLE_QUEENS_SIDE_WHITE:

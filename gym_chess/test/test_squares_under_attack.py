@@ -34,9 +34,7 @@ def test_pawn_moves():
     env = ChessEnvV2(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves(attack=True)
     env.render_moves(moves)
-    expected_moves = set(
-        [(5, 5), (5, 4), (5, 1), (5, 7), (3, 3), (5, 6), (5, 3), (3, 5), (5, 2)]
-    )
+    expected_moves = set([(5, 5), (5, 4), (5, 1), (5, 7), (3, 3), (5, 6), (5, 3), (3, 5), (5, 2)])
     assert set([tuple(move[1]) for move in moves]) == expected_moves
 
 
@@ -47,9 +45,7 @@ def test_knight_moves():
     env = ChessEnvV2(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves(attack=True, skip_pawns=True)
     env.render_moves(moves)
-    expected_moves = set(
-        [(6, 5), (2, 3), (6, 3), (5, 6), (3, 6), (3, 2), (2, 5), (5, 2)]
-    )
+    expected_moves = set([(6, 5), (2, 3), (6, 3), (5, 6), (3, 6), (3, 2), (2, 5), (5, 2)])
     assert set([tuple(move[1]) for move in moves]) == expected_moves
 
 
@@ -114,9 +110,7 @@ def test_king_moves():
     env = ChessEnvV2(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves(attack=True, skip_pawns=True)
     env.render_moves(moves)
-    expected_moves = set(
-        [(5, 5), (3, 4), (4, 3), (5, 4), (4, 5), (3, 3), (5, 3), (3, 5)]
-    )
+    expected_moves = set([(5, 5), (3, 4), (4, 3), (5, 4), (4, 5), (3, 3), (5, 3), (3, 5)])
     assert set([tuple(move[1]) for move in moves]) == expected_moves
 
 

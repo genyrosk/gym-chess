@@ -147,9 +147,7 @@ def test_king_capture_moves():
     env = ChessEnvV2(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves()
     env.render_moves(moves)
-    expected_moves = set(
-        [(4, 4), (5, 5), (3, 4), (5, 4), (4, 5), (3, 3), (5, 3), (3, 2), (5, 2)]
-    )
+    expected_moves = set([(4, 4), (5, 5), (3, 4), (5, 4), (4, 5), (3, 3), (5, 3), (3, 2), (5, 2)])
     assert set([tuple(move[1]) for move in moves]) == expected_moves
 
 
