@@ -178,7 +178,6 @@ class ChessEnvV2(gym.Env):
         self.saved_states = {}
         self.repetitions = 0  # 3 repetitions ==> DRAW
         self.move_count = 0
-        self.previous_action = None
         self.white_king_castle_possible = True
         self.white_queen_castle_possible = True
         self.black_king_castle_possible = True
@@ -229,7 +228,6 @@ class ChessEnvV2(gym.Env):
 
         # make move
         self.state, reward, self.done = self.player_move(action)
-        self.previous_action = action
         self.switch_player()
 
         if self.done:
@@ -241,7 +239,6 @@ class ChessEnvV2(gym.Env):
             opponent_action = self.move_to_action(opponent_move)
             # make move
             self.state, opp_reward, self.done = self.player_move(opponent_action)
-            self.previous_action = action
             reward -= opp_reward
             self.switch_player()
 
@@ -316,7 +313,7 @@ class ChessEnvV2(gym.Env):
 
         # TODO: implement castle move
         #
-        if type(move) is str and move in CASTLE_MOVES and False:
+        if type(move) is str and move in CASTLE_MOVES:
             new_state = self.run_castle_move(new_state, move)
         elif type(move) is list or tuple:
             # Classic move
