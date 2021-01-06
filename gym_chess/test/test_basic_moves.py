@@ -15,6 +15,8 @@ from gym_chess.test.utils import run_test_funcs
 
 # Blank board
 BASIC_BOARD = np.array([[0] * 8] * 8, dtype=np.int8)
+# BASIC_BOARD[0, 0] = -KING_ID
+# BASIC_BOARD[7, 7] = KING_ID
 
 # Pawn basic movements
 def test_pawn_basic_moves():
@@ -137,6 +139,7 @@ def test_queen_basic_moves():
 # King basic movements
 def test_king_basic_moves():
     BOARD = copy(BASIC_BOARD)
+    BOARD[7, 7] = 0
     BOARD[4, 4] = KING_ID
     env = ChessEnvV2(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves()

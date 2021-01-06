@@ -60,10 +60,10 @@ def test_attacked_square_castling_path():
     env = ChessEnvV2(opponent="none", initial_state=BOARD)
 
     opponent = env.get_other_player(env.current_player)
-    moves = env.get_possible_moves(opponent, attack=True)
+    moves = env.get_possible_moves(player=opponent, attack=True)
     env.render_moves(moves)
 
-    squares_under_attack = env.get_squares_attacked_by_player(opponent)
+    squares_under_attack = env.get_squares_attacked_by_player(env.state, opponent)
     squares_under_attack_hashmap = defaultdict(lambda: None)
     for sq in squares_under_attack:
         squares_under_attack_hashmap[tuple(sq)] = True
