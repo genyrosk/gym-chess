@@ -409,14 +409,14 @@ class ChessEnvV2(gym.Env):
             state[7, 4] = EMPTY_SQUARE_ID
         elif move == CASTLE_KINGS_SIDE_BLACK:
             state[0, 4] = EMPTY_SQUARE_ID
-            state[0, 5] = ROOK_ID
-            state[0, 6] = KING_ID
+            state[0, 5] = -ROOK_ID
+            state[0, 6] = -KING_ID
             state[0, 7] = EMPTY_SQUARE_ID
         elif move == CASTLE_QUEENS_SIDE_BLACK:
             state[0, 0] = EMPTY_SQUARE_ID
             state[0, 1] = EMPTY_SQUARE_ID
-            state[0, 2] = KING_ID
-            state[0, 3] = ROOK_ID
+            state[0, 2] = -KING_ID
+            state[0, 3] = -ROOK_ID
             state[0, 4] = EMPTY_SQUARE_ID
         if self.current_player_is_white:
             self.white_king_castle_possible = False
