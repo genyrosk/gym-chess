@@ -254,7 +254,9 @@ class ChessEnvV2(gym.Env):
         opponent_player = self.switch_player()
         self.possible_moves = self.get_possible_moves(player=opponent_player)
         # check if there are no possible_moves for opponent
-        if not self.possible_moves and self.king_is_checked(state=self.state, player=opponent_player):
+        if not self.possible_moves and self.king_is_checked(
+            state=self.state, player=opponent_player
+        ):
             self.done = True
             reward += WIN_REWARD
         if self.done:
@@ -270,7 +272,9 @@ class ChessEnvV2(gym.Env):
             self.possible_moves = self.get_possible_moves(player=agent_player)
             reward -= opp_reward
             # check if there are no possible_moves for opponent
-            if not self.possible_moves and self.king_is_checked(state=self.state, player=agent_player):
+            if not self.possible_moves and self.king_is_checked(
+                state=self.state, player=agent_player
+            ):
                 self.done = True
                 reward += LOSS_REWARD
 
@@ -363,9 +367,7 @@ class ChessEnvV2(gym.Env):
             # Pawn becomes Queen
             # TODO: allow player to choose the piece into which the pawn converts
             if ID_TO_TYPE[piece_to_move] == PAWN:
-                if (player == WHITE and _to[0] == 7) or (
-                    player == BLACK and _to[0] == 0
-                ):
+                if (player == WHITE and _to[0] == 7) or (player == BLACK and _to[0] == 0):
                     new_state[_to[0], _to[1]] = QUEEN_ID * self.player_to_int(player)
                     reward += CONVERT_PAWN_TO_QUEEN_REWARD
 
@@ -570,7 +572,7 @@ class ChessEnvV2(gym.Env):
             coords = np.array(coords, dtype=np.int8)
             if piece_id == 0:
                 continue
-            if piece_id not in [-6, -5, -4, -3, -2, -1, 0,1,2,3,4,5,6]:
+            if piece_id not in [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]:
                 breakpoint()
             color = ID_TO_COLOR[piece_id]
             if color != player:
@@ -604,7 +606,9 @@ class ChessEnvV2(gym.Env):
             )
 
         # King not present on the board (for testing pruposes)
-        if (player == WHITE and not self.white_king_on_the_board) or (player == BLACK and not self.black_king_on_the_board):
+        if (player == WHITE and not self.white_king_on_the_board) or (
+            player == BLACK and not self.black_king_on_the_board
+        ):
             return moves
 
         # Filter out moves that leave the king checked
@@ -613,14 +617,14 @@ class ChessEnvV2(gym.Env):
             if type(move) is not list:
                 return False
             # skip king moves
-            if (player == WHITE and state[move[0][0], move[0][1]] == KING_ID) or (player == BLACK and state[move[0][0], move[0][1]] == -KING_ID):
+            if (player == WHITE and state[move[0][0], move[0][1]] == KING_ID) or (
+                player == BLACK and state[move[0][0], move[0][1]] == -KING_ID
+            ):
                 return False
             next_state, _ = self.next_state(state, player, move, commit=False)
             return self.king_is_checked(state=next_state, player=player)
-        moves = [
-            move for move in moves
-            if not move_leaves_king_checked(move)
-        ]
+
+        moves = [move for move in moves if not move_leaves_king_checked(move)]
         return moves
 
     def king_moves(
@@ -772,7 +776,9 @@ class ChessEnvV2(gym.Env):
             #
         return moves
 
-    def castle_moves(self, player, state=None, squares_under_attack_hashmap=defaultdict(lambda: None)):
+    def castle_moves(
+        self, player, state=None, squares_under_attack_hashmap=defaultdict(lambda: None)
+    ):
         if state is None:
             state = self.state
         moves = []
@@ -988,7 +994,9 @@ class ChessEnvV2(gym.Env):
         if player is None:
             player = self.current_player
         # King not present on the board (for testing purposes)
-        if (player == WHITE and not self.white_king_on_the_board) or (player == BLACK and not self.black_king_on_the_board):
+        if (player == WHITE and not self.white_king_on_the_board) or (
+            player == BLACK and not self.black_king_on_the_board
+        ):
             return False
         player_int = ChessEnvV2.player_to_int(player)
         king_id = player_int * KING_ID
@@ -1001,6 +1009,6 @@ class ChessEnvV2(gym.Env):
         return any(np.equal(attacked_squares, king_square).all(1))
 
     def encode_state(self):
-        mapping = '0ABCDEFfedcba'
-        encoding = ''.join([mapping[val] for val in self.state.ravel()])
+        mapping = "0ABCDEFfedcba"
+        encoding = "".join([mapping[val] for val in self.state.ravel()])
         return encoding
