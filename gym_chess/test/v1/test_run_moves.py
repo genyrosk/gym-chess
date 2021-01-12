@@ -1,8 +1,8 @@
 from copy import copy
 
 import numpy as np
-from gym_chess.envs import ChessEnvV2
-from gym_chess.envs.chess_v2 import (
+from gym_chess.envs import ChessEnvV1
+from gym_chess.envs.chess_v1 import (
     KING_ID,
     QUEEN_ID,
     ROOK_ID,
@@ -21,7 +21,7 @@ def test_pawn_basic_moves():
     BOARD = copy(BASIC_BOARD)
     BOARD[6, 0] = PAWN_ID
     BOARD[1, 0] = -PAWN_ID
-    env = ChessEnvV2(opponent="none", initial_state=BOARD)
+    env = ChessEnvV1(opponent="none", initial_state=BOARD)
     # player_1
     actions = env.get_possible_actions()
     env.step(actions[0])

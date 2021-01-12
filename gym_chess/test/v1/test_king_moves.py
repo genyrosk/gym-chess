@@ -1,8 +1,8 @@
 from copy import copy
 
 import numpy as np
-from gym_chess.envs import ChessEnvV2
-from gym_chess.envs.chess_v2 import (
+from gym_chess.envs import ChessEnvV1
+from gym_chess.envs.chess_v1 import (
     KING_ID,
     QUEEN_ID,
     ROOK_ID,
@@ -24,7 +24,7 @@ BASIC_BOARD[3, 5] = -PAWN_ID
 def test_king_moves_1():
     BOARD = copy(BASIC_BOARD)
     BOARD[4, 4] = KING_ID
-    env = ChessEnvV2(opponent="none", initial_state=BOARD)
+    env = ChessEnvV1(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves()
     env.render_moves(moves)
     king_is_checked = env.king_is_checked()
@@ -37,7 +37,7 @@ def test_king_moves_1():
 def test_king_moves_2():
     BOARD = copy(BASIC_BOARD)
     BOARD[3, 4] = KING_ID
-    env = ChessEnvV2(opponent="none", initial_state=BOARD)
+    env = ChessEnvV1(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves()
     env.render_moves(moves)
     king_is_checked = env.king_is_checked()

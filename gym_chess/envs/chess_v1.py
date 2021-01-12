@@ -134,7 +134,7 @@ def make_random_policy(np_random, bot_player):
 
 # CHESS GYM ENVIRONMENT CLASS
 # ---------------------------
-class ChessEnvV2(gym.Env):
+class ChessEnvV1(gym.Env):
     def __init__(
         self,
         player_color=WHITE,
@@ -738,7 +738,7 @@ class ChessEnvV2(gym.Env):
         if state is None:
             state = self.state
         moves = []
-        player_int = ChessEnvV2.player_to_int(player)
+        player_int = ChessEnvV1.player_to_int(player)
         attack_squares = [
             coords + np.array([1, -1], dtype=np.int8) * (-player_int),
             coords + np.array([1, +1], dtype=np.int8) * (-player_int),
@@ -748,18 +748,18 @@ class ChessEnvV2(gym.Env):
 
         if attack:
             for square in attack_squares:
-                if ChessEnvV2.square_is_on_board(square) and not self.is_king_from_player(
+                if ChessEnvV1.square_is_on_board(square) and not self.is_king_from_player(
                     player, state, square
                 ):
                     moves.append([coords, square])
         else:
             # moves only to empty squares
             x, y = one_step_square
-            if ChessEnvV2.square_is_on_board(one_step_square) and self.state[x, y] == 0:
+            if ChessEnvV1.square_is_on_board(one_step_square) and self.state[x, y] == 0:
                 moves.append([coords, one_step_square])
 
             x, y = two_step_square
-            if ChessEnvV2.square_is_on_board(two_step_square) and (
+            if ChessEnvV1.square_is_on_board(two_step_square) and (
                 (player == WHITE and coords[0] == 6) or (player == BLACK and coords[0] == 1)
             ):
                 if self.state[x, y] == 0:
@@ -767,7 +767,7 @@ class ChessEnvV2(gym.Env):
 
             # attacks only opponent's pieces
             for square in attack_squares:
-                if ChessEnvV2.square_is_on_board(square) and self.is_piece_from_other_player(
+                if ChessEnvV1.square_is_on_board(square) and self.is_piece_from_other_player(
                     player, state, square
                 ):
                     moves.append([coords, square])
@@ -859,7 +859,7 @@ class ChessEnvV2(gym.Env):
         If opponent king is encountered, then there's a problem...
         => return <bool> is_playable
         """
-        if not ChessEnvV2.square_is_on_board(square):
+        if not ChessEnvV1.square_is_on_board(square):
             return False
         elif squares_under_attack_hashmap[tuple(square)]:
             return False
@@ -881,7 +881,7 @@ class ChessEnvV2(gym.Env):
         If opponent king is encountered, then there's a problem...
         => return <bool> is_playable
         """
-        if not ChessEnvV2.square_is_on_board(square):
+        if not ChessEnvV1.square_is_on_board(square):
             return False
         elif self.is_piece_from_player(player, state, square):
             return True
@@ -901,7 +901,7 @@ class ChessEnvV2(gym.Env):
         - opponent pieces (excluding king)
         => return [<bool> playable, <bool> stop_iteration]
         """
-        if not ChessEnvV2.square_is_on_board(square):
+        if not ChessEnvV1.square_is_on_board(square):
             return False, True
         elif self.is_piece_from_player(player, state, square):
             return False, True
@@ -924,7 +924,7 @@ class ChessEnvV2(gym.Env):
         - own pieces
         => return [<bool> playable, <bool> stop_iteration]
         """
-        if not ChessEnvV2.square_is_on_board(square):
+        if not ChessEnvV1.square_is_on_board(square):
             return False, True
         elif self.is_piece_from_player(player, state, square):
             return True, True
@@ -998,7 +998,7 @@ class ChessEnvV2(gym.Env):
             player == BLACK and not self.black_king_on_the_board
         ):
             return False
-        player_int = ChessEnvV2.player_to_int(player)
+        player_int = ChessEnvV1.player_to_int(player)
         king_id = player_int * KING_ID
         king_pos = np.where(state == king_id)
         king_square = [king_pos[0][0], king_pos[1][0]]

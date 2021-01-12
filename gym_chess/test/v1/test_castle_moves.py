@@ -2,8 +2,8 @@ from collections import defaultdict
 from copy import copy
 
 import numpy as np
-from gym_chess.envs import ChessEnvV2
-from gym_chess.envs.chess_v2 import (
+from gym_chess.envs import ChessEnvV1
+from gym_chess.envs.chess_v1 import (
     KING_ID,
     QUEEN_ID,
     ROOK_ID,
@@ -33,7 +33,7 @@ def test_king_side_castle():
     BOARD = copy(BASIC_BOARD)
     BOARD[7, 4] = KING_ID
     BOARD[7, 7] = ROOK_ID
-    env = ChessEnvV2(opponent="none", initial_state=BOARD)
+    env = ChessEnvV1(opponent="none", initial_state=BOARD)
     moves = env.castle_moves(env.current_player)
     env.render_moves(moves)
     assert moves == [CASTLE_KINGS_SIDE_WHITE]
@@ -44,7 +44,7 @@ def test_queen_side_castle():
     BOARD = copy(BASIC_BOARD)
     BOARD[7, 0] = ROOK_ID
     BOARD[7, 4] = KING_ID
-    env = ChessEnvV2(opponent="none", initial_state=BOARD)
+    env = ChessEnvV1(opponent="none", initial_state=BOARD)
     moves = env.castle_moves(env.current_player)
     env.render_moves(moves)
     assert moves == [CASTLE_QUEENS_SIDE_WHITE]
@@ -57,7 +57,7 @@ def test_attacked_square_castling_path():
     BOARD[6, 2] = 0
     BOARD[7, 0] = ROOK_ID
     BOARD[7, 4] = KING_ID
-    env = ChessEnvV2(opponent="none", initial_state=BOARD)
+    env = ChessEnvV1(opponent="none", initial_state=BOARD)
 
     opponent = env.get_other_player(env.current_player)
     moves = env.get_possible_moves(player=opponent, attack=True)
@@ -79,7 +79,7 @@ def test_king_has_moved_castling():
     BOARD = copy(BASIC_BOARD)
     BOARD[7, 0] = ROOK_ID
     BOARD[7, 4] = KING_ID
-    env = ChessEnvV2(opponent="none", initial_state=BOARD)
+    env = ChessEnvV1(opponent="none", initial_state=BOARD)
     king_moves = env.king_moves(env.current_player, np.array([7, 4]))
     action = env.move_to_action(king_moves[0])
     env.step(action)
