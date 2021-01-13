@@ -82,15 +82,15 @@ ID_TO_VALUE = {piece.id: piece.value for piece in PIECES}
 ID_TO_DESC = {piece.id: piece.desc for piece in PIECES}
 
 RESIGN = "RESIGN"
-CASTLE_KINGS_SIDE_WHITE = "CASTLE_KING_SIDE_WHITE"
-CASTLE_QUEENS_SIDE_WHITE = "CASTLE_QUEEN_SIDE_WHITE"
-CASTLE_KINGS_SIDE_BLACK = "CASTLE_KING_SIDE_BLACK"
-CASTLE_QUEENS_SIDE_BLACK = "CASTLE_QUEEN_SIDE_BLACK"
+CASTLE_KING_SIDE_WHITE = "CASTLE_KING_SIDE_WHITE"
+CASTLE_QUEEN_SIDE_WHITE = "CASTLE_QUEEN_SIDE_WHITE"
+CASTLE_KING_SIDE_BLACK = "CASTLE_KING_SIDE_BLACK"
+CASTLE_QUEEN_SIDE_BLACK = "CASTLE_QUEEN_SIDE_BLACK"
 CASTLE_MOVES = [
-    CASTLE_KINGS_SIDE_WHITE,
-    CASTLE_QUEENS_SIDE_WHITE,
-    CASTLE_KINGS_SIDE_BLACK,
-    CASTLE_QUEENS_SIDE_BLACK,
+    CASTLE_KING_SIDE_WHITE,
+    CASTLE_QUEEN_SIDE_WHITE,
+    CASTLE_KING_SIDE_BLACK,
+    CASTLE_QUEEN_SIDE_BLACK,
 ]
 
 DEFAULT_BOARD = [
@@ -419,24 +419,24 @@ class ChessEnvV2(gym.Env):
         grid = self.board_to_grid()
         for move in moves:
             if type(move) is str and move in CASTLE_MOVES:
-                if move == CASTLE_QUEENS_SIDE_WHITE:
+                if move == CASTLE_QUEEN_SIDE_WHITE:
                     grid[7][0] = highlight(grid[7][0], background="white")
                     grid[7][1] = highlight(" >>", background="green")
                     grid[7][2] = highlight("> <", background="green")
                     grid[7][3] = highlight("<< ", background="green")
                     grid[7][4] = highlight(grid[7][4], background="white")
-                elif move == CASTLE_KINGS_SIDE_WHITE:
+                elif move == CASTLE_KING_SIDE_WHITE:
                     grid[7][4] = highlight(grid[7][4], background="white")
                     grid[7][5] = highlight(" >>", background="green")
                     grid[7][6] = highlight("<< ", background="green")
                     grid[7][7] = highlight(grid[7][7], background="white")
-                elif move == CASTLE_QUEENS_SIDE_BLACK:
+                elif move == CASTLE_QUEEN_SIDE_BLACK:
                     grid[0][0] = highlight(grid[0][0], background="white")
                     grid[0][1] = highlight(" >>", background="green")
                     grid[0][2] = highlight("> <", background="green")
                     grid[0][3] = highlight("<< ", background="green")
                     grid[0][4] = highlight(grid[0][4], background="white")
-                elif move == CASTLE_KINGS_SIDE_BLACK:
+                elif move == CASTLE_KING_SIDE_BLACK:
                     grid[0][4] = highlight(grid[0][4], background="white")
                     grid[0][5] = highlight(" >>", background="green")
                     grid[0][6] = highlight("<< ", background="green")
@@ -459,13 +459,13 @@ class ChessEnvV2(gym.Env):
             _from = move[0][0] * 8 + move[0][1]
             _to = move[1][0] * 8 + move[1][1]
             return _from * 64 + _to
-        if move == CASTLE_KINGS_SIDE_WHITE:
+        if move == CASTLE_KING_SIDE_WHITE:
             return 64 * 64
-        elif move == CASTLE_QUEENS_SIDE_WHITE:
+        elif move == CASTLE_QUEEN_SIDE_WHITE:
             return 64 * 64 + 1
-        elif move == CASTLE_KINGS_SIDE_BLACK:
+        elif move == CASTLE_KING_SIDE_BLACK:
             return 64 * 64 + 2
-        elif move == CASTLE_QUEENS_SIDE_BLACK:
+        elif move == CASTLE_QUEEN_SIDE_BLACK:
             return 64 * 64 + 3
         elif move == RESIGN:
             return 64 * 64 + 4
@@ -480,13 +480,13 @@ class ChessEnvV2(gym.Env):
         if action >= 64 * 64:
             _action = action - 64 * 64
             if _action == 0:
-                return CASTLE_KINGS_SIDE_WHITE
+                return CASTLE_KING_SIDE_WHITE
             elif _action == 1:
-                return CASTLE_QUEENS_SIDE_WHITE
+                return CASTLE_QUEEN_SIDE_WHITE
             elif _action == 2:
-                return CASTLE_KINGS_SIDE_BLACK
+                return CASTLE_KING_SIDE_BLACK
             elif _action == 3:
-                return CASTLE_QUEENS_SIDE_BLACK
+                return CASTLE_QUEEN_SIDE_BLACK
             elif _action == 4:
                 return RESIGN
         _from, _to = action // 64, action % 64
@@ -505,9 +505,9 @@ class ChessEnvV2(gym.Env):
         return f"{cols[y0]}{rows[x0]}{cols[y1]}{rows[x1]}"
 
     def move_to_string(self, move):
-        if move in [CASTLE_KINGS_SIDE_WHITE, CASTLE_KINGS_SIDE_BLACK]:
+        if move in [CASTLE_KING_SIDE_WHITE, CASTLE_KING_SIDE_BLACK]:
             return "O-O"
-        elif move in [CASTLE_QUEENS_SIDE_WHITE, CASTLE_QUEENS_SIDE_BLACK]:
+        elif move in [CASTLE_QUEEN_SIDE_WHITE, CASTLE_QUEEN_SIDE_BLACK]:
             return "O-O-O"
         _from, _to = move
         rows = list(reversed("12345678"))

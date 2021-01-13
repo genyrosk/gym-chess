@@ -10,8 +10,8 @@ from gym_chess.envs.chess_v2 import (
     BISHOP_ID,
     KNIGHT_ID,
     PAWN_ID,
-    CASTLE_KINGS_SIDE_WHITE,
-    CASTLE_QUEENS_SIDE_WHITE,
+    CASTLE_KING_SIDE_WHITE,
+    CASTLE_QUEEN_SIDE_WHITE,
 )
 from gym_chess.test.utils import run_test_funcs
 
@@ -36,18 +36,18 @@ def test_king_side_castle():
     env = ChessEnvV2(opponent="none", initial_board=BOARD)
     moves = env.get_castle_moves(player=env.current_player)
     env.render_moves(moves)
-    assert moves == [CASTLE_KINGS_SIDE_WHITE]
+    assert moves == [CASTLE_KING_SIDE_WHITE]
 
 
 # Queen side castle
 def test_queen_side_castle():
     BOARD = copy(BASIC_BOARD)
     BOARD[7, 0] = ROOK_ID
-    BOARD[7, 5] = KING_ID
+    BOARD[7, 4] = KING_ID
     env = ChessEnvV2(opponent="none", initial_board=BOARD)
     moves = env.get_castle_moves(player=env.current_player)
     env.render_moves(moves)
-    assert moves == [CASTLE_QUEENS_SIDE_WHITE]
+    assert moves == [CASTLE_QUEEN_SIDE_WHITE]
 
 
 # Attacked square side castle
