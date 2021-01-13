@@ -1,11 +1,13 @@
 use lazy_static::lazy_static;
 
 use pyo3::exceptions::PyException;
-use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyDict, PyList, PyLong, PyUnicode};
+use pyo3::types::PyDict;
 use std::collections::HashMap;
 
+//
+// Constants
+//
 pub const EMPTY_SQUARE_ID: isize = 0;
 pub const KING_ID: isize = 1;
 pub const QUEEN_ID: isize = 2;
@@ -14,6 +16,42 @@ pub const BISHOP_ID: isize = 4;
 pub const KNIGHT_ID: isize = 5;
 pub const PAWN_ID: isize = 6;
 
+const CONVERT_PAWN_TO_QUEEN_REWARD: isize = 10;
+const PAWN_VALUE: isize = 1;
+const KNIGHT_VALUE: isize = 3;
+const BISHOP_VALUE: isize = 3;
+const ROOK_VALUE: isize = 5;
+const QUEEN_VALUE: isize = 10;
+const KING_VALUE: isize = 0;
+// const WIN_REWARD: isize = 100;
+// const LOSS_REWARD: isize = -100;
+
+const KING_DESC: &str = &"K";
+const QUEEN_DESC: &str = &"Q";
+const ROOK_DESC: &str = &"R";
+const BISHOP_DESC: &str = &"B";
+const KNIGHT_DESC: &str = &"N";
+const PAWN_DESC: &str = &" ";
+
+const CASTLE_KING_SIDE_WHITE: &str = "CASTLE_KING_SIDE_WHITE";
+const CASTLE_QUEEN_SIDE_WHITE: &str = "CASTLE_QUEEN_SIDE_WHITE";
+const CASTLE_KING_SIDE_BLACK: &str = "CASTLE_KING_SIDE_BLACK";
+const CASTLE_QUEEN_SIDE_BLACK: &str = "CASTLE_QUEEN_SIDE_BLACK";
+
+pub const DEFAULT_BOARD: Board = [
+    [-3, -5, -4, -2, -1, -4, -5, -3],
+    [-6, -6, -6, -6, -6, -6, -6, -6],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [6, 6, 6, 6, 6, 6, 6, 6],
+    [3, 5, 4, 2, 1, 4, 5, 3],
+];
+
+//
+// Structs
+//
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum PieceType {
     King,
@@ -24,13 +62,6 @@ pub enum PieceType {
     Pawn,
     Empty,
 }
-
-const KING_DESC: &str = &"K";
-const QUEEN_DESC: &str = &"Q";
-const ROOK_DESC: &str = &"R";
-const BISHOP_DESC: &str = &"B";
-const KNIGHT_DESC: &str = &"N";
-const PAWN_DESC: &str = &" ";
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Color {
@@ -54,11 +85,6 @@ pub enum SquareColor {
     None,
 }
 
-const CASTLE_KING_SIDE_WHITE: &str = "CASTLE_KING_SIDE_WHITE";
-const CASTLE_QUEEN_SIDE_WHITE: &str = "CASTLE_QUEEN_SIDE_WHITE";
-const CASTLE_KING_SIDE_BLACK: &str = "CASTLE_KING_SIDE_BLACK";
-const CASTLE_QUEEN_SIDE_BLACK: &str = "CASTLE_QUEEN_SIDE_BLACK";
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Castle {
     KingSideWhite,
@@ -81,28 +107,6 @@ impl Castle {
         self.to_str().to_string()
     }
 }
-
-const RESIGN: usize = 1;
-const CASTLE_KINGS_SIDE_WHITE: usize = 2;
-const CASTLE_QUEENS_SIDE_WHITE: usize = 3;
-const CASTLE_KINGS_SIDE_BLACK: usize = 4;
-const CASTLE_QUEENS_SIDE_BLACK: usize = 5;
-const CASTLE_MOVES: [usize; 4] = [
-    CASTLE_KINGS_SIDE_WHITE,
-    CASTLE_QUEENS_SIDE_WHITE,
-    CASTLE_KINGS_SIDE_BLACK,
-    CASTLE_QUEENS_SIDE_BLACK,
-];
-
-const CONVERT_PAWN_TO_QUEEN_REWARD: isize = 10;
-const PAWN_VALUE: isize = 1;
-const KNIGHT_VALUE: isize = 3;
-const BISHOP_VALUE: isize = 3;
-const ROOK_VALUE: isize = 5;
-const QUEEN_VALUE: isize = 10;
-const KING_VALUE: isize = 0;
-const WIN_REWARD: isize = 100;
-const LOSS_REWARD: isize = -100;
 
 #[derive(Debug)]
 pub struct Piece<'a> {
@@ -166,7 +170,7 @@ pub const PIECES: [Piece; 13] = [
     Piece {
         icon: '.',
         desc: &" ",
-        color: Color::White, // temporary, tho it doesn't matter
+        color: Color::White, // doesn't matter but must be set to avoid using Option<Color>
         _type: PieceType::Empty,
         id: EMPTY_SQUARE_ID,
         value: 0,
@@ -254,6 +258,9 @@ lazy_static! {
     };
 }
 
+//
+// Types
+//
 pub type Board = [[isize; 8]; 8];
 pub type Square = (isize, isize);
 pub type Move = (Square, Square);
@@ -268,32 +275,9 @@ pub struct MoveStruct {
     data: MoveUnion,
 }
 
-#[derive(FromPyObject)]
-enum InputMoveEnum {
-    String(String),                           // input is a string
-    IntTuple((isize, isize), (isize, isize)), // input is a 2-2-tuple with ints
-}
-
-pub const DEFAULT_BOARD: Board = [
-    [-3, -5, -4, -2, -1, -4, -5, -3],
-    [-6, -6, -6, -6, -6, -6, -6, -6],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 6, 0, 0, 0, 0, 6, 0],
-    // [6, 6, 6, 6, 6, 6, 6, 6],
-    [3, 5, 4, 2, 1, 4, 5, 3],
-];
-
-fn array2d_to_vec2d(arr: &[&[isize]]) -> Vec<Vec<isize>> {
-    let mut vec: Vec<Vec<isize>> = Vec::new();
-    for &row in arr.iter() {
-        vec.push(row.iter().cloned().collect());
-    }
-    return vec;
-}
-
+//
+// State struct
+//
 #[derive(Debug, Copy, Clone)]
 pub struct State {
     pub board: Board,
@@ -411,10 +395,6 @@ impl State {
     }
 }
 
-pub fn example() {
-    println!("example function");
-}
-
 pub fn render_state(state: &State) {
     render_board(&state.board);
 }
@@ -431,6 +411,14 @@ pub fn render_board(board: &Board) {
     }
     println!("\n   ------------------------");
     println!("    a  b  c  d  e  f  g  h");
+}
+
+fn array2d_to_vec2d(arr: &[&[isize]]) -> Vec<Vec<isize>> {
+    let mut vec: Vec<Vec<isize>> = Vec::new();
+    for &row in arr.iter() {
+        vec.push(row.iter().cloned().collect());
+    }
+    return vec;
 }
 
 fn player_string_to_enum(player: &str) -> Color {
@@ -463,6 +451,7 @@ fn player_enum_to_string<'a>(player: &Color) -> &'a str {
     return _player;
 }
 
+//
 // CORE LOGIC
 // ---------------------------------------------------------
 // ---------------------------------------------------------
@@ -783,7 +772,6 @@ pub fn next_state(state: &State, player: Color, move_struct: MoveStruct) -> (Sta
                     new_state.black_queen_castle_is_possible = false;
                 }
             },
-            _ => {}
         }
     }
 
@@ -1239,20 +1227,21 @@ fn is_king_from_player(state: &State, player: Color, square: Square) -> bool {
     return piece_color == player;
 }
 
-fn is_king_from_other_player(state: &State, player: Color, square: Square) -> bool {
-    let other_player = get_other_player(player);
-    return is_king_from_player(state, other_player, square);
-}
+// fn is_king_from_other_player(state: &State, player: Color, square: Square) -> bool {
+//     let other_player = get_other_player(player);
+//     return is_king_from_player(state, other_player, square);
+// }
 
 fn square_tuple_to_flat(square: Square) -> usize {
     let square_flat = square.0 * 8 + square.1;
     square_flat as usize
 }
-fn square_flat_to_tuple(square_flat: usize) -> Square {
-    let row = square_flat / 8;
-    let col = square_flat % 8;
-    (row as isize, col as isize)
-}
+
+// fn square_flat_to_tuple(square_flat: usize) -> Square {
+//     let row = square_flat / 8;
+//     let col = square_flat % 8;
+//     (row as isize, col as isize)
+// }
 
 fn convert_py_state<'a>(_py: Python<'a>, state_py: &'a PyDict) -> PyResult<State> {
     let board: Board = state_py.get_item("board").unwrap().extract()?;
@@ -1304,20 +1293,20 @@ fn convert_castle_move_to_string(castle_move: Castle) -> String {
     castle_move.to_string()
 }
 
-fn convert_move_union_to_string(move_struct: MoveStruct) -> String {
-    unsafe {
-        match move_struct {
-            MoveStruct {
-                is_castle: false,
-                data: MoveUnion { normal_move },
-            } => convert_move_to_string(normal_move),
-            MoveStruct {
-                is_castle: true,
-                data: MoveUnion { castle },
-            } => convert_castle_move_to_string(castle),
-        }
-    }
-}
+// fn convert_move_union_to_string(move_struct: MoveStruct) -> String {
+//     unsafe {
+//         match move_struct {
+//             MoveStruct {
+//                 is_castle: false,
+//                 data: MoveUnion { normal_move },
+//             } => convert_move_to_string(normal_move),
+//             MoveStruct {
+//                 is_castle: true,
+//                 data: MoveUnion { castle },
+//             } => convert_castle_move_to_string(castle),
+//         }
+//     }
+// }
 
 fn convert_move_to_type(_move: &str) -> MoveStruct {
     let letters: HashMap<&str, isize> = [
