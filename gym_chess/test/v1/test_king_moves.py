@@ -28,8 +28,9 @@ def test_king_moves_1():
     moves = env.get_possible_moves()
     env.render_moves(moves)
     king_is_checked = env.king_is_checked()
-    expected_moves = set([(5, 5), (3, 4), (4, 3), (5, 4), (4, 5), (5, 3)])
-    assert set([tuple(move[1]) for move in moves]) == expected_moves
+    expected_attacks = set([(5, 5), (3, 4), (4, 3), (5, 4), (4, 5), (5, 3)])
+    squares_attacked = set([tuple(move[1]) for move in moves])
+    assert squares_attacked == expected_attacks
     assert king_is_checked
 
 
@@ -41,8 +42,9 @@ def test_king_moves_2():
     moves = env.get_possible_moves()
     env.render_moves(moves)
     king_is_checked = env.king_is_checked()
-    expected_moves = set([(2, 4), (4, 3), (2, 3), (4, 5), (2, 5)])
-    assert set([tuple(move[1]) for move in moves]) == expected_moves
+    expected_attacks = set([(2, 4), (4, 3), (2, 3), (4, 5), (2, 5)])
+    squares_attacked = set([tuple(move[1]) for move in moves])
+    assert squares_attacked == expected_attacks
     assert not king_is_checked
 
 

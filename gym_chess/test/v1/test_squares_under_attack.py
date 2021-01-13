@@ -34,8 +34,9 @@ def test_pawn_moves():
     env = ChessEnvV1(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves(attack=True)
     env.render_moves(moves)
-    expected_moves = set([(5, 5), (5, 4), (5, 1), (5, 7), (3, 3), (5, 6), (5, 3), (3, 5), (5, 2)])
-    assert set([tuple(move[1]) for move in moves]) == expected_moves
+    expected_attacks = set([(5, 5), (5, 4), (5, 1), (5, 7), (3, 3), (5, 6), (5, 3), (3, 5), (5, 2)])
+    squares_attacked = set([tuple(move[1]) for move in moves])
+    assert squares_attacked == expected_attacks
 
 
 # Knight basic movements
@@ -45,8 +46,9 @@ def test_knight_moves():
     env = ChessEnvV1(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves(attack=True, skip_pawns=True)
     env.render_moves(moves)
-    expected_moves = set([(6, 5), (2, 3), (6, 3), (5, 6), (3, 6), (3, 2), (2, 5), (5, 2)])
-    assert set([tuple(move[1]) for move in moves]) == expected_moves
+    expected_attacks = set([(6, 5), (2, 3), (6, 3), (5, 6), (3, 6), (3, 2), (2, 5), (5, 2)])
+    squares_attacked = set([tuple(move[1]) for move in moves])
+    assert squares_attacked == expected_attacks
 
 
 # Bishop basic movements
@@ -56,8 +58,9 @@ def test_bishop_moves():
     env = ChessEnvV1(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves(attack=True, skip_pawns=True)
     env.render_moves(moves)
-    expected_moves = set([(6, 2), (5, 5), (6, 6), (3, 3), (5, 3), (3, 5)])
-    assert set([tuple(move[1]) for move in moves]) == expected_moves
+    expected_attacks = set([(6, 2), (5, 5), (6, 6), (3, 3), (5, 3), (3, 5)])
+    squares_attacked = set([tuple(move[1]) for move in moves])
+    assert squares_attacked == expected_attacks
 
 
 # Rook basic movements
@@ -67,10 +70,11 @@ def test_rook_moves():
     env = ChessEnvV1(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves(attack=True, skip_pawns=True)
     env.render_moves(moves)
-    expected_moves = set(
+    expected_attacks = set(
         [(4, 0), (3, 4), (4, 3), (5, 4), (4, 6), (6, 4), (4, 2), (4, 5), (4, 1), (4, 7)]
     )
-    assert set([tuple(move[1]) for move in moves]) == expected_moves
+    squares_attacked = set([tuple(move[1]) for move in moves])
+    assert squares_attacked == expected_attacks
 
 
 # Queen basic movements
@@ -80,7 +84,7 @@ def test_queen_moves():
     env = ChessEnvV1(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves(attack=True, skip_pawns=True)
     env.render_moves(moves)
-    expected_moves = set(
+    expected_attacks = set(
         [
             (6, 2),
             (4, 0),
@@ -100,7 +104,8 @@ def test_queen_moves():
             (3, 5),
         ]
     )
-    assert set([tuple(move[1]) for move in moves]) == expected_moves
+    squares_attacked = set([tuple(move[1]) for move in moves])
+    assert squares_attacked == expected_attacks
 
 
 # King basic movements
@@ -110,8 +115,9 @@ def test_king_moves():
     env = ChessEnvV1(opponent="none", initial_state=BOARD)
     moves = env.get_possible_moves(attack=True, skip_pawns=True)
     env.render_moves(moves)
-    expected_moves = set([(5, 5), (3, 4), (4, 3), (5, 4), (4, 5), (3, 3), (5, 3), (3, 5)])
-    assert set([tuple(move[1]) for move in moves]) == expected_moves
+    expected_attacks = set([(5, 5), (3, 4), (4, 3), (5, 4), (4, 5), (3, 3), (5, 3), (3, 5)])
+    squares_attacked = set([tuple(move[1]) for move in moves])
+    assert squares_attacked == expected_attacks
 
 
 if __name__ == "__main__":
