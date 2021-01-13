@@ -37,11 +37,8 @@ PAWN_DESC = ""
 WHITE_ID = 1
 BLACK_ID = -1
 
-WHITE = "white"
-BLACK = "black"
-
-KINGS_SIDE = "kinds_side"
-QUEENS_SIDE = "queens_side"
+WHITE = "WHITE"
+BLACK = "BLACK"
 
 CONVERT_PAWN_TO_QUEEN_REWARD = 10
 PAWN_VALUE = 1
@@ -85,16 +82,16 @@ ID_TO_TYPE = {piece.id: piece.type for piece in PIECES}
 ID_TO_VALUE = {piece.id: piece.value for piece in PIECES}
 ID_TO_DESC = {piece.id: piece.desc for piece in PIECES}
 
-RESIGN = "resign"
-CASTLE_KINGS_SIDE_WHITE = "castle_king_side_white"
-CASTLE_QUEENS_SIDE_WHITE = "cast_queen_side_white"
-CASTLE_KINGS_SIDE_BLACK = "castle_king_side_black"
-CASTLE_QUEENS_SIDE_BLACK = "cast_queen_side_black"
+RESIGN = "RESIGN"
+CASTLE_KING_SIDE_WHITE = "CASTLE_KING_SIDE_WHITE"
+CASTLE_QUEEN_SIDE_WHITE = "CASTLE_QUEEN_SIDE_WHITE"
+CASTLE_KING_SIDE_BLACK = "CASTLE_KING_SIDE_BLACK"
+CASTLE_QUEEN_SIDE_BLACK = "CASTLE_QUEEN_SIDE_BLACK"
 CASTLE_MOVES = [
-    CASTLE_KINGS_SIDE_WHITE,
-    CASTLE_QUEENS_SIDE_WHITE,
-    CASTLE_KINGS_SIDE_BLACK,
-    CASTLE_QUEENS_SIDE_BLACK,
+    CASTLE_KING_SIDE_WHITE,
+    CASTLE_QUEEN_SIDE_WHITE,
+    CASTLE_KING_SIDE_BLACK,
+    CASTLE_QUEEN_SIDE_BLACK,
 ]
 
 DEFAULT_BOARD = np.array(
@@ -398,23 +395,23 @@ class ChessEnvV1(gym.Env):
         return new_state, reward
 
     def run_castle_move(self, state, move):
-        if move == CASTLE_KINGS_SIDE_WHITE:
+        if move == CASTLE_KING_SIDE_WHITE:
             state[7, 4] = EMPTY_SQUARE_ID
             state[7, 5] = ROOK_ID
             state[7, 6] = KING_ID
             state[7, 7] = EMPTY_SQUARE_ID
-        elif move == CASTLE_QUEENS_SIDE_WHITE:
+        elif move == CASTLE_QUEEN_SIDE_WHITE:
             state[7, 0] = EMPTY_SQUARE_ID
             state[7, 1] = EMPTY_SQUARE_ID
             state[7, 2] = KING_ID
             state[7, 3] = ROOK_ID
             state[7, 4] = EMPTY_SQUARE_ID
-        elif move == CASTLE_KINGS_SIDE_BLACK:
+        elif move == CASTLE_KING_SIDE_BLACK:
             state[0, 4] = EMPTY_SQUARE_ID
             state[0, 5] = -ROOK_ID
             state[0, 6] = -KING_ID
             state[0, 7] = EMPTY_SQUARE_ID
-        elif move == CASTLE_QUEENS_SIDE_BLACK:
+        elif move == CASTLE_QUEEN_SIDE_BLACK:
             state[0, 0] = EMPTY_SQUARE_ID
             state[0, 1] = EMPTY_SQUARE_ID
             state[0, 2] = -KING_ID
@@ -463,24 +460,24 @@ class ChessEnvV1(gym.Env):
         grid = self.state_to_grid()
         for move in moves:
             if type(move) is str and move in CASTLE_MOVES:
-                if move == CASTLE_QUEENS_SIDE_WHITE:
+                if move == CASTLE_QUEEN_SIDE_WHITE:
                     grid[7][0] = highlight(grid[7][0], background="white")
                     grid[7][1] = highlight(" >>", background="green")
                     grid[7][2] = highlight("> <", background="green")
                     grid[7][3] = highlight("<< ", background="green")
                     grid[7][4] = highlight(grid[7][4], background="white")
-                elif move == CASTLE_KINGS_SIDE_WHITE:
+                elif move == CASTLE_KING_SIDE_WHITE:
                     grid[7][4] = highlight(grid[7][4], background="white")
                     grid[7][5] = highlight(" >>", background="green")
                     grid[7][6] = highlight("<< ", background="green")
                     grid[7][7] = highlight(grid[7][7], background="white")
-                elif move == CASTLE_QUEENS_SIDE_BLACK:
+                elif move == CASTLE_QUEEN_SIDE_BLACK:
                     grid[0][0] = highlight(grid[0][0], background="white")
                     grid[0][1] = highlight(" >>", background="green")
                     grid[0][2] = highlight("> <", background="green")
                     grid[0][3] = highlight("<< ", background="green")
                     grid[0][4] = highlight(grid[0][4], background="white")
-                elif move == CASTLE_KINGS_SIDE_BLACK:
+                elif move == CASTLE_KING_SIDE_BLACK:
                     grid[0][4] = highlight(grid[0][4], background="white")
                     grid[0][5] = highlight(" >>", background="green")
                     grid[0][6] = highlight("<< ", background="green")
@@ -503,13 +500,13 @@ class ChessEnvV1(gym.Env):
             _from = move[0][0] * 8 + move[0][1]
             _to = move[1][0] * 8 + move[1][1]
             return _from * 64 + _to
-        if move == CASTLE_KINGS_SIDE_WHITE:
+        if move == CASTLE_KING_SIDE_WHITE:
             return 64 * 64
-        elif move == CASTLE_QUEENS_SIDE_WHITE:
+        elif move == CASTLE_QUEEN_SIDE_WHITE:
             return 64 * 64 + 1
-        elif move == CASTLE_KINGS_SIDE_BLACK:
+        elif move == CASTLE_KING_SIDE_BLACK:
             return 64 * 64 + 2
-        elif move == CASTLE_QUEENS_SIDE_BLACK:
+        elif move == CASTLE_QUEEN_SIDE_BLACK:
             return 64 * 64 + 3
         elif move == RESIGN:
             return 64 * 64 + 4
@@ -518,13 +515,13 @@ class ChessEnvV1(gym.Env):
         if action >= 64 * 64:
             _action = action - 64 * 64
             if _action == 0:
-                return CASTLE_KINGS_SIDE_WHITE
+                return CASTLE_KING_SIDE_WHITE
             elif _action == 1:
-                return CASTLE_QUEENS_SIDE_WHITE
+                return CASTLE_QUEEN_SIDE_WHITE
             elif _action == 2:
-                return CASTLE_KINGS_SIDE_BLACK
+                return CASTLE_KING_SIDE_BLACK
             elif _action == 3:
-                return CASTLE_QUEENS_SIDE_BLACK
+                return CASTLE_QUEEN_SIDE_BLACK
             elif _action == 4:
                 return RESIGN
         _from, _to = action // 64, action % 64
@@ -533,9 +530,9 @@ class ChessEnvV1(gym.Env):
         return [np.array([x0, y0], dtype=np.int8), np.array([x1, y1], dtype=np.int8)]
 
     def move_to_string(self, move):
-        if move in [CASTLE_KINGS_SIDE_WHITE, CASTLE_KINGS_SIDE_BLACK]:
+        if move in [CASTLE_KING_SIDE_WHITE, CASTLE_KING_SIDE_BLACK]:
             return "O-O"
-        elif move in [CASTLE_QUEENS_SIDE_WHITE, CASTLE_QUEENS_SIDE_BLACK]:
+        elif move in [CASTLE_QUEEN_SIDE_WHITE, CASTLE_QUEEN_SIDE_BLACK]:
             return "O-O-O"
         _from, _to = move
         rows = list(reversed("12345678"))
@@ -572,8 +569,6 @@ class ChessEnvV1(gym.Env):
             coords = np.array(coords, dtype=np.int8)
             if piece_id == 0:
                 continue
-            if piece_id not in [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]:
-                breakpoint()
             color = ID_TO_COLOR[piece_id]
             if color != player:
                 continue
@@ -783,7 +778,7 @@ class ChessEnvV1(gym.Env):
             state = self.state
         moves = []
         if player == WHITE:
-            # CASTLE_QUEENS_SIDE_WHITE:
+            # CASTLE_QUEEN_SIDE_WHITE:
             rook = (7, 0)
             empty_3 = (7, 1)
             empty_2 = (7, 2)
@@ -799,8 +794,8 @@ class ChessEnvV1(gym.Env):
                 and not squares_under_attack_hashmap[empty_1]
                 and not squares_under_attack_hashmap[empty_2]
             ):
-                moves.append(CASTLE_QUEENS_SIDE_WHITE)
-            # CASTLE_KINGS_SIDE_WHITE
+                moves.append(CASTLE_QUEEN_SIDE_WHITE)
+            # CASTLE_KING_SIDE_WHITE
             king = (7, 4)
             empty_1 = (7, 5)
             empty_2 = (7, 6)
@@ -814,9 +809,9 @@ class ChessEnvV1(gym.Env):
                 and not squares_under_attack_hashmap[empty_1]
                 and not squares_under_attack_hashmap[empty_2]
             ):
-                moves.append(CASTLE_KINGS_SIDE_WHITE)
+                moves.append(CASTLE_KING_SIDE_WHITE)
         else:
-            # CASTLE_QUEENS_SIDE_BLACK:
+            # CASTLE_QUEEN_SIDE_BLACK:
             rook = (0, 0)
             empty_3 = (0, 1)
             empty_2 = (0, 2)
@@ -832,8 +827,8 @@ class ChessEnvV1(gym.Env):
                 and not squares_under_attack_hashmap[empty_1]
                 and not squares_under_attack_hashmap[empty_2]
             ):
-                moves.append(CASTLE_QUEENS_SIDE_BLACK)
-            # CASTLE_KINGS_SIDE_BLACK:
+                moves.append(CASTLE_QUEEN_SIDE_BLACK)
+            # CASTLE_KING_SIDE_BLACK:
             king = (0, 4)
             empty_1 = (0, 5)
             empty_2 = (0, 6)
@@ -847,7 +842,7 @@ class ChessEnvV1(gym.Env):
                 and not squares_under_attack_hashmap[empty_1]
                 and not squares_under_attack_hashmap[empty_2]
             ):
-                moves.append(CASTLE_KINGS_SIDE_BLACK)
+                moves.append(CASTLE_KING_SIDE_BLACK)
         return moves
 
     def king_move(self, player, state, square, squares_under_attack_hashmap):
@@ -913,7 +908,6 @@ class ChessEnvV1(gym.Env):
             return True, False
         else:
             print(f"PLAYABLE MOVE ERROR {square}")
-            breakpoint()
             raise Exception(f"PLAYABLE MOVE ERROR {square}")
 
     def attacking_move(self, player, state, square):
@@ -936,7 +930,6 @@ class ChessEnvV1(gym.Env):
             return True, False
         else:
             print(f"ATTACKING MOVE ERROR {square}")
-            breakpoint()
             raise Exception(f"ATTACKING MOVE ERROR {square}")
 
     def get_squares_attacked_by_player(self, state, player):
