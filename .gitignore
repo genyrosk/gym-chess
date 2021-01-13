@@ -1,6 +1,9 @@
 # Rust binaries
 /target
 
+# Rust files
+Cargo.lock
+
 # Scripts
 __script.py
 
