@@ -1,6 +1,9 @@
 import sys
 from setuptools import setup
 
+if sys.version_info < (3, 6):
+	raise Exception('Only Python 3.6 and above is supported.')
+
 try:
     from setuptools_rust import Binding, RustExtension
 except ImportError:
