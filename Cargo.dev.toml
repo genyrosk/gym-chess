@@ -1,0 +1,20 @@
+[package]
+name = "gym-chess"
+version = "0.2.0"
+authors = ["genyrosk <e.roskach@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "gym_chess"
+path = "src/lib.rs"
+
+[dependencies]
+lazy_static = "1.4.0"
+
+[dependencies.pyo3]
+version = "0.13.0"
+features = []
+
+[profile.dev]
+debug = 2
