@@ -608,9 +608,11 @@ pub fn _get_possible_castle_moves(
     }
 
     if (player == Color::White
-        && (state.white_king_castle_is_possible == true || state.white_queen_castle_is_possible == true))
+        && (state.white_king_castle_is_possible == true
+            || state.white_queen_castle_is_possible == true))
         || (player == Color::Black
-            && (state.black_king_castle_is_possible == true || state.black_queen_castle_is_possible == true))
+            && (state.black_king_castle_is_possible == true
+                || state.black_queen_castle_is_possible == true))
     {
         castle_moves = calc_castle_moves(state, player, squares_under_attack_map);
     }
@@ -626,7 +628,10 @@ fn move_leaves_king_checked(state: &State, player: Color, _move: Move) -> bool {
     {
         return false;
     }
-    let move_struct = MoveStruct { is_castle: false, data: MoveUnion { normal_move: _move } };
+    let move_struct = MoveStruct {
+        is_castle: false,
+        data: MoveUnion { normal_move: _move },
+    };
     let (_next_state, _) = next_state(state, player, move_struct);
     return king_is_checked(&_next_state, player);
 }
@@ -690,7 +695,7 @@ pub fn next_state(state: &State, player: Color, move_struct: MoveStruct) -> (Sta
         match move_struct {
             MoveStruct {
                 is_castle: false,
-                data: MoveUnion { normal_move }
+                data: MoveUnion { normal_move },
             } => {
                 let _from = (normal_move.0 .0 as usize, normal_move.0 .1 as usize);
                 let _to = (normal_move.1 .0 as usize, normal_move.1 .1 as usize);
@@ -741,7 +746,7 @@ pub fn next_state(state: &State, player: Color, move_struct: MoveStruct) -> (Sta
             }
             MoveStruct {
                 is_castle: true,
-                data: MoveUnion { castle }
+                data: MoveUnion { castle },
             } => match castle {
                 Castle::KingSideWhite => {
                     new_state.board[7][4] = EMPTY_SQUARE_ID;
@@ -1165,7 +1170,7 @@ fn king_attacking_move(
     let square_flat = square_tuple_to_flat(square);
     match squares_under_attack_map.get(&square_flat) {
         Some(&_) => return false,
-        _ => {},
+        _ => {}
     }
 
     if square_is_empty(state, square)
@@ -1304,11 +1309,11 @@ fn convert_move_union_to_string(move_struct: MoveStruct) -> String {
         match move_struct {
             MoveStruct {
                 is_castle: false,
-                data: MoveUnion { normal_move }
+                data: MoveUnion { normal_move },
             } => convert_move_to_string(normal_move),
             MoveStruct {
                 is_castle: true,
-                data: MoveUnion { castle }
+                data: MoveUnion { castle },
             } => convert_castle_move_to_string(castle),
         }
     }
@@ -1333,27 +1338,35 @@ fn convert_move_to_type(_move: &str) -> MoveStruct {
         CASTLE_KING_SIDE_WHITE => {
             return MoveStruct {
                 is_castle: true,
-                data: MoveUnion {castle: Castle::KingSideWhite }
+                data: MoveUnion {
+                    castle: Castle::KingSideWhite,
+                },
             };
-        },
+        }
         CASTLE_QUEEN_SIDE_WHITE => {
             return MoveStruct {
                 is_castle: true,
-                data: MoveUnion {castle: Castle::QueenSideWhite }
+                data: MoveUnion {
+                    castle: Castle::QueenSideWhite,
+                },
             };
-        },
+        }
         CASTLE_KING_SIDE_BLACK => {
             return MoveStruct {
                 is_castle: true,
-                data: MoveUnion {castle: Castle::KingSideBlack }
+                data: MoveUnion {
+                    castle: Castle::KingSideBlack,
+                },
             };
-        },
+        }
         CASTLE_QUEEN_SIDE_BLACK => {
             return MoveStruct {
                 is_castle: true,
-                data: MoveUnion {castle: Castle::QueenSideBlack }
+                data: MoveUnion {
+                    castle: Castle::QueenSideBlack,
+                },
             };
-        },
+        }
         _ => {
             let _from_0: isize = _move[1..2].parse::<isize>().unwrap();
             let _from_1: &str = &_move[0..1];
@@ -1364,7 +1377,7 @@ fn convert_move_to_type(_move: &str) -> MoveStruct {
             let _move: Move = (_from, _to);
             return MoveStruct {
                 is_castle: false,
-                data: MoveUnion {normal_move: _move }
+                data: MoveUnion { normal_move: _move },
             };
         }
     }
@@ -1437,9 +1450,7 @@ impl ChessEngine {
         // update kings under attack
         update_state(&mut new_state);
         // if both kings are checked, this position is impossible => raise exception
-        if new_state.white_king_is_checked == true
-            && new_state.black_king_is_checked == true
-        {
+        if new_state.white_king_is_checked == true && new_state.black_king_is_checked == true {
             println!("Both Kings are in check: this position is impossible");
             PyException::new_err("Both Kings are in check: this position is impossible")
                 .restore(_py);
