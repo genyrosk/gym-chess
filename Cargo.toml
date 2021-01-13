@@ -1,6 +1,6 @@
 [package]
 name = "gym-chess"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["genyrosk <e.roskach@gmail.com>"]
 edition = "2018"
 
