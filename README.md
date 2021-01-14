@@ -229,10 +229,10 @@ env.render_moves(moves[10:12] + moves[16:18])
 
 #### `ChessEnvV1(player_color="WHITE", opponent="random", log=True, initial_state=DEFAULT_BOARD)`
 
-- `opponent`: "random" to play against a bot that picks a random move, "none" to play against yourself as both players
-- `log`: renders moves by each player
-- `initial_state`: you can specify a custom board. View scripts `gym_chess/test/v1` for some examples
-- `player_color`: "WHITE" or "BLACK", specify only if playing against random bot
+- `opponent`: can be `"random"`, `"none"` or a function. Tells the environment whether to use a bot that picks a random move, play against self or use a specific bot policy (default: `"random"`)
+- `log`: `True` or `False`, specifies whether to log every move and render every new state (default: `True`)
+- `initial_state`: initial board positions, the default value is the default chess starting board. You can specify a custom board. View scripts `gym_chess/test/v1` for some examples
+- `player_color`: `"WHITE"` or `"BLACK"`, only useful if playing against a bot (default: `"WHITE"`)
 
 
 #### `env.get_possible_moves(state=state, player="WHITE", attack=False)`
@@ -244,48 +244,24 @@ This method will calculate the possible moves. By default they are calculated at
 - `attack`: if set to True, will return the **attacks** instead of moves
 
 
-------
-------
+## Move specification:
 
-
-Version 1 of  `gym-chess` is an almost complete rewrite of the original code with a bunch of improvements, bug-fixes and tests. The original implementation has been renamed V0, but further development or maintenance of it is not planned.
-
-
-## Environment settings
-
-As chess is a 2-player game, you can choose to play against a random bot or against yourself (self-play). 
-
-- `initial_state`: initial board positions, the default value is the default chess starting board
-- `opponent`: can be `"random"`, `"none"` or a function. Tells the environment whether to use a random bot, play against self or use a specific bot policy (default: `"random"`)
-- `log`: `True` or `False`, specifies whether to log every move and render every new state (default: `True`)
-- `player_color`: `"WHITE"` or `"BLACK"`, only useful if playing against a bot
-
-
-## New move specification:
-
-Moves are now specified as either:
+Moves are encoded as either:
 - a tuple of coordinates `((from_x, from_y), (to_x, to_y))`
 - or a string e.g. `"CASTLE_KING_SIDE_WHITE"`, `"CASTLE_QUEEN_SIDE_BLACK"`, `"RESIGN"`
 
 Moves are pre-calculated for every new state and stored in `possible_moves`.
 
-A basic script would look like this:
+
+## State and differences between v1 and v2
+
+`v1` and `v2` share most of the API, but the internals a little bit different.
+
+For instance `v1` stores the board matrix directly in the state as `env.state`, while in `v2` the state is a dictionary where board can be accessed with `env.state['board']`.
 
 ```python
-env = ChessEnvV1(log=False)
-moves = env.possible_moves
-action = env.move_to_action(moves[0])
-state, reward, done, info = env.step(action)
-env.render()
-```
-
-
-## State
-
-The state is the board with pieces. 
-
-```python
->>> print(env.state)
+>>> print(env.state) # v1
+>>> print(env.state['board']) # v2
 ```
 ```shell
 [[-3, -5, -4, -2, -1, -4, -5, -3],
@@ -298,27 +274,8 @@ The state is the board with pieces.
  [3, 5, 4, 2, 1, 4, 5, 3]]
 ```
 
-It can be rendered in a prettier way with the `render()` method:
 
-```python
->>> env.render()
-```
-
-```shell
-    -------------------------
- 8 |  ♖  ♘  ♗  ♕  ♔  ♗  ♘  ♖ |
- 7 |  ♙  ♙  ♙  ♙  ♙  ♙  ♙  ♙ |
- 6 |  .  .  .  .  .  .  .  . |
- 5 |  .  .  .  .  .  .  .  . |
- 4 |  .  .  .  .  .  .  .  . |
- 3 |  .  .  .  .  .  .  .  . |
- 2 |  ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟ |
- 1 |  ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜ |
-    -------------------------
-      a  b  c  d  e  f  g  h
-```
-
-Every integer represents a piece. Positive pieces are white and negative ones are black. 
+Every integer represents a piece. Positive pieces are white and negative ones are black.
 
 Piece IDs are stored in constants that can be imported.
 
@@ -362,45 +319,37 @@ env.black_king_on_the_board
 
 Code fixing is done with [black](https://github.com/psf/black) with max line width of 100 characters with the command `black -l 100 .` No config needed.
 
+Rust code is formatted with `cargo fmt`.
+
 
 ## Notes:
 
 En-passant moves are not currently supported in the V1 environment.
 
 
+## Building the Rust code
 
-# Gym-Chess in Rust
+The `v2` environment uses a chess engine implemented in Rust that uses [PyO3](https://github.com/PyO3/pyo3) to to bind to the Python interpreter. Rust is an amazing compiled language and this project holds 2 configurations:
 
-## To test the code in `main.rs`
+- `Cargo.py.toml` is used to build the library with `setup.py`
+- `Cargo.dev.toml` is used to build directly with `cargo` and to access the library in the `main.rs` script for development purposes
 
-In `Cargo.toml` set the following:
+Note: we haven't found a way to specify the Cargo toml file to either process, so copy the contents of the config you want to use into `Cargo.toml` to make it work.
 
-```toml
-[lib]
-name = "gym_chess_rust"
-# crate-type = ["cdylib"]
-path = "src/lib.rs"
 
-[dependencies.pyo3]
-features = []
-```
-
-Instead of `features = ["extension-module"]`
-
-# Checkout
+# References
 
 - https://pyo3.rs/v0.4.1/print.html
--
+- https://github.com/PyO3/pyo3
+- https://www.forrestthewoods.com/blog/how-to-debug-rust-with-visual-studio-code/
 
-# More
 
-https://www.forrestthewoods.com/blog/how-to-debug-rust-with-visual-studio-code/
-
+# Benchmarks
 
 ```python
 
-from gym_chess.envs import ChessEnvV1
-from gym_chess.envs import ChessEnvV2
+from gym_chess.envs import ChessEnvV1, ChessEnvV2
+
 env_v1 = ChessEnvV1()
 env_v2 = ChessEnvV2()
 
