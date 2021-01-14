@@ -311,6 +311,18 @@ class ChessEnvV2(gym.Env):
         self.black_king_is_checked = state.get("black_king_is_checked")
 
     @property
+    def possible_moves(self):
+        return self._possible_moves
+
+    @possible_moves.setter
+    def possible_moves(self, moves):
+        self._possible_moves = moves
+
+    @property
+    def possible_actions(self):
+        return [self.move_to_action(m) for m in self.possible_moves]
+
+    @property
     def info(self):
         return dict(
             # **self.state,
