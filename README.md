@@ -334,9 +334,9 @@ Rust code is formatted with `cargo fmt`.
 
 # Building the Rust code
 
-The `v2` environment uses a chess engine implemented in Rust that uses [PyO3](https://github.com/PyO3/pyo3) to to bind to the Python interpreter. Rust is an amazing compiled language and this project holds 2 configurations:
+The `v2` environment uses a chess engine implemented in Rust that uses [PyO3](https://github.com/PyO3/pyo3) to bind to the Python interpreter. Rust is an amazing compiled language and this project holds 2 configurations:
 
-- `Cargo.py.toml` is used to build the library with `setup.py`
+- `Cargo.py.toml` is used to build the library into a Python module with `setup.py`
 - `Cargo.dev.toml` is used to build directly with `cargo` and to access the library in the `main.rs` script for development purposes
 
 Note: we haven't found a way to specify the Cargo toml file to either process, so copy the contents of the config you want to use into `Cargo.toml` to make it work.
@@ -356,7 +356,7 @@ En-passant moves are not currently supported in the V1 environment.
 
 # Benchmarks
 
-The `v2` environment is over 100 times faster than the `v1` environment. However, since most of the code is written in Rust, it's much harder to debug.
+The `v2` environment is over 100 times faster than the `v1` environment. However, since most of the code is written in Rust, it's generally harder to debug.
 
 ```python
 
