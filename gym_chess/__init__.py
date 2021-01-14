@@ -1,8 +1,7 @@
-# rust module
-from gym_chess.gym_chess import ChessEngine
+from gym_chess.gym_chess import ChessEngine  # rust module
+from gym_chess.envs import ChessEnvV0, ChessEnvV1, ChessEnvV2  # envs
+from gym.envs.registration import register  # to register envs
 
-# register envs
-from gym.envs.registration import register
 
 register(
     id="ChessVsRandomBot-v0",
