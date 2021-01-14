@@ -320,20 +320,19 @@ env.black_king_on_the_board
 Examples can be found in `gym_chess/example`. The `v1` examples are valid for both the `v1` and `v2` environments.
 
 
+# Testing
 
-## Code linting and fixing
+Run all the tests with `pytest`.
+
+
+# Code linting and fixing
 
 Code fixing is done with [black](https://github.com/psf/black) with max line width of 100 characters with the command `black -l 100 .` No config needed.
 
 Rust code is formatted with `cargo fmt`.
 
 
-## Notes:
-
-En-passant moves are not currently supported in the V1 environment.
-
-
-## Building the Rust code
+# Building the Rust code
 
 The `v2` environment uses a chess engine implemented in Rust that uses [PyO3](https://github.com/PyO3/pyo3) to to bind to the Python interpreter. Rust is an amazing compiled language and this project holds 2 configurations:
 
@@ -341,6 +340,11 @@ The `v2` environment uses a chess engine implemented in Rust that uses [PyO3](ht
 - `Cargo.dev.toml` is used to build directly with `cargo` and to access the library in the `main.rs` script for development purposes
 
 Note: we haven't found a way to specify the Cargo toml file to either process, so copy the contents of the config you want to use into `Cargo.toml` to make it work.
+
+
+# Notes:
+
+En-passant moves are not currently supported in the V1 environment.
 
 
 # References
