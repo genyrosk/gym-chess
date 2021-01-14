@@ -315,6 +315,12 @@ env.black_king_on_the_board
 ```
 
 
+## Examples
+
+Examples can be found in `gym_chess/example`. The `v1` examples are valid for both the `v1` and `v2` environments.
+
+
+
 ## Code linting and fixing
 
 Code fixing is done with [black](https://github.com/psf/black) with max line width of 100 characters with the command `black -l 100 .` No config needed.
