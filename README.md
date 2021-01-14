@@ -346,6 +346,8 @@ Note: we haven't found a way to specify the Cargo toml file to either process, s
 
 # Benchmarks
 
+The `v2` environment is over 100 times faster than the `v1` environment. However, since most of the code is written in Rust, it's much harder to debug.
+
 ```python
 
 from gym_chess.envs import ChessEnvV1, ChessEnvV2
@@ -353,11 +355,11 @@ from gym_chess.envs import ChessEnvV1, ChessEnvV2
 env_v1 = ChessEnvV1()
 env_v2 = ChessEnvV2()
 
-# Old:
+# v1: written in Python
 >>> %timeit -n 50 -r 8 env_v1.get_possible_moves()
-## result: 29.5 ms ± 872 µs per loop (mean ± std. dev. of 8 runs, 50 loops each)
+## 29.5 ms ± 872 µs per loop (mean ± std. dev. of 8 runs, 50 loops each)
 
-# New: compiled in Rust
+# v2: compiled in Rust
 >>> %timeit -n 50 -r 8 env_v2.get_possible_moves()
 ## 240 µs ± 31.9 µs per loop (mean ± std. dev. of 8 runs, 50 loops each)
 
