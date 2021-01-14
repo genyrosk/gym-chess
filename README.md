@@ -1,6 +1,6 @@
 # gym-chess
 
-A simple chess environment for gym. It computes all available moves, including castling, *en-passant*, pawn promotions and 3-fold repetition draws. 
+A simple chess environment for gym. It computes all available moves, including castling, pawn promotions and 3-fold repetition draws.
 
 <table style="text-align:center;border-spacing:0pt;font-family:'Arial Unicode MS'; border-collapse:collapse; border-color: black; border-style: solid; border-width: 0pt 0pt 0pt 0pt">
 <tr>
@@ -104,81 +104,91 @@ A simple chess environment for gym. It computes all available moves, including c
 </tr>
 </table>
 
-### Setup
 
-Install the environment:
+## Setup
+
+Install the module:
 
 ``` python
 
-pip install -e .  
+pip install -e .
 
 ```
 
-Play against yourself or against a random bot.
 
-``` python
+## Environments
+
+There are 3 environments available: `v0`, `v1` and `v2`. The original `v0` version contains legacy code and is no longer supported, so it's recommended to use `v1` or `v2`.
+
+Both `v1` and `v2` share the same basic API so in most scenarios can be used interchangeably. The `v1` version is implemented in pure Python, while `v2` has its core logic implemented in Rust and is over 100 times faster. Hence, if performance and speed are of the essence, `v2` is the way to go.
+
+
+## Usage
+
+You can import the Python classes directly, or create pre-defined environments with `gym`:
+
+
+```python
 
 import gym
-import gym_chess
+from gym_chess import ChessEnvV1, ChessEnvV2
 
-env = gym.make('ChessVsRandomBot-v0')
-env = gym.make('ChessVsSelf-v0')
+env1 = ChessEnvV1()
+env2 = ChessEnvV2()
 
-```
-
-### Play
-
-You can either get available moves and convert them into the action space, or get the available actions directly. 
-
-``` python 
-
-import random
-
-# moves
-moves = env.get_possible_moves(state, player)
-m = random.choice(moves)
-action = env.move_to_actions(m)
-
-# actions
-actions = env.get_possible_actions(state, player)
-action = random.choice(actions)
-
+env1 = gym.make('ChessVsSelf-v1')
+env2 = gym.make('ChessVsSelf-v2')
 
 ```
 
-
-A move is a dictionary that holds the id of the piece (from 1 to 16 for white and -1 to -16 for black), its current position and its new position. 
+You can also play against a random bot:
 
 ``` python
 
-move = {
-    'piece_id': <int>,
-    'pos': [<int>,<int>],
-    'new_pos': [<int>,<int>]
-}
+env = gym.make('ChessVsSelf-v1')
 
 ```
 
-NB: when a move is converted to an action and vice-versa, the `'pos'` attribute is dropped (it doesn't provide any useful information since the current position of a given piece is recorded in the current state). 
 
+## Play
 
-Pass an action to the environment and retrieve the `new state`, `reward`, `done` and `info`:
+Moves are pre-calculated for the current state and can be accessed from the environment. You can also access them in the form of actions from the environment action space.
 
-``` python 
+Once you have chosen a move, make sure to convert it into an action (or select an action directly) and pass it to the environment to get the next state.
 
-state, reward, done, __ = env.step(action)
+``` python
+
+import random
+from gym_chess import ChessEnvV1
+
+env = ChessEnvV1() # or ChessEnvV2
+
+# current state
+state = env.state
+
+# select a move and convert it into an action
+moves = env.possible_moves
+move = random.choice(moves)
+action = env.move_to_actions(move)
+
+# or select an action directly
+actions = env.possible_actions
+action = random.choice(actions)
+
+# pass it to the env and get the next state
+new_state, reward, done, info = env.step(action)
 
 ```
 
 Reset the environment:
 
-``` python 
+``` python
 
 initial_state = env.reset()
 
 ```
 
-### Visualise the chess board
+## Visualise the chess board and moves
 
 Visualise the current state of the chess game:
 
@@ -188,28 +198,57 @@ env.render()
 
 ```
 
-Show the moves that a piece can make given a set of moves (by any/all pieces on the board)
-
-``` python
-
-# Player 1 moves
-piece = 6 # white queen
-env.render_moves(state, piece, moves, mode='human')
-
-```
-
-You can also retrieve the list of squares that pieces are attacking and defending by specifying the "attack" option:
-
-``` python
-
-attacking_moves = env.get_possible_moves(state, player, attack=True)
-
+```shell
+    -------------------------
+ 8 |  ♖  ♘  ♗  ♕  ♔  ♗  ♘  ♖ |
+ 7 |  ♙  ♙  ♙  ♙  ♙  ♙  ♙  ♙ |
+ 6 |  .  .  .  .  .  .  .  . |
+ 5 |  .  .  .  .  .  .  .  . |
+ 4 |  .  .  .  .  .  .  .  . |
+ 3 |  .  .  .  .  .  .  .  . |
+ 2 |  ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟ |
+ 1 |  ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜ |
+    -------------------------
+      a  b  c  d  e  f  g  h
 ```
 
 
+You can also visualise multiple moves:
+
+```python
+
+moves = env.possible_moves
+env.render_moves(moves[10:12] + moves[16:18])
+
+```
 
 
-Version 1 of  `gym-chess` is an almost complete rewrite of the original code with a bunch of improvements, bug-fixes and tests. The original implementation has been renamed V0, but further development or maintenance of it is not planned. 
+## API
+
+### Initialize environment
+
+#### `ChessEnvV1(player_color="WHITE", opponent="random", log=True, initial_state=DEFAULT_BOARD)`
+
+- `opponent`: "random" to play against a bot that picks a random move, "none" to play against yourself as both players
+- `log`: renders moves by each player
+- `initial_state`: you can specify a custom board. View scripts `gym_chess/test/v1` for some examples
+- `player_color`: "WHITE" or "BLACK", specify only if playing against random bot
+
+
+#### `env.get_possible_moves(state=state, player="WHITE", attack=False)`
+
+This method will calculate the possible moves. By default they are calculated at the current state for the current player (`state.current_player`).
+
+- `state`: (optional) state for which to calculate the moves
+- `player`: (optional) "WHITE" or "BLACK", specifies the player
+- `attack`: if set to True, will return the **attacks** instead of moves
+
+
+------
+------
+
+
+Version 1 of  `gym-chess` is an almost complete rewrite of the original code with a bunch of improvements, bug-fixes and tests. The original implementation has been renamed V0, but further development or maintenance of it is not planned.
 
 
 ## Environment settings
