@@ -1,4 +1,4 @@
-# gym-chess
+# gym-chess ♟️
 
 A simple chess environment for gym. It computes all available moves, including castling, pawn promotions and 3-fold repetition draws.
 
