@@ -8,12 +8,10 @@ edition = "2018"
 [lib]
 name = "gym_chess"
 crate-type = ["cdylib"]
-#path = "src/lib.rs"
 
 [dependencies]
 lazy_static = "1.4.0"
 
 [dependencies.pyo3]
 version = "0.13.0"
-#features = []
 features = ["extension-module"]
