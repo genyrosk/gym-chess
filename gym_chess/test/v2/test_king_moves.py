@@ -1,8 +1,8 @@
 from copy import copy
 
 import numpy as np
-from gym_chess.envs import ChessEnvV1
-from gym_chess.envs.chess_v1 import (
+from gym_chess.envs import ChessEnvV2
+from gym_chess.envs.chess_v2 import (
     KING_ID,
     QUEEN_ID,
     ROOK_ID,
@@ -24,10 +24,11 @@ BASIC_BOARD[3, 5] = -PAWN_ID
 def test_king_moves_1():
     BOARD = copy(BASIC_BOARD)
     BOARD[4, 4] = KING_ID
-    env = ChessEnvV1(opponent="none", initial_state=BOARD)
+    BOARD[0, 0] = ROOK_ID
+    env = ChessEnvV2(opponent="none", initial_board=BOARD)
     moves = env.get_possible_moves()
     env.render_moves(moves)
-    king_is_checked = env.king_is_checked()
+    king_is_checked = env.white_king_is_checked
     expected_attacks = set([(5, 5), (3, 4), (4, 3), (5, 4), (4, 5), (5, 3)])
     squares_attacked = set([tuple(move[1]) for move in moves])
     assert squares_attacked == expected_attacks
@@ -38,10 +39,10 @@ def test_king_moves_1():
 def test_king_moves_2():
     BOARD = copy(BASIC_BOARD)
     BOARD[3, 4] = KING_ID
-    env = ChessEnvV1(opponent="none", initial_state=BOARD)
+    env = ChessEnvV2(opponent="none", initial_board=BOARD)
     moves = env.get_possible_moves()
     env.render_moves(moves)
-    king_is_checked = env.king_is_checked()
+    king_is_checked = env.white_king_is_checked
     expected_attacks = set([(2, 4), (4, 3), (2, 3), (4, 5), (2, 5)])
     squares_attacked = set([tuple(move[1]) for move in moves])
     assert squares_attacked == expected_attacks

@@ -1,3 +1,12 @@
+# Rust binaries
+/target
+
+# Rust files
+Cargo.lock
+
+# Scripts
+__script.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

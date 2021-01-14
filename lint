@@ -1,0 +1,3 @@
+#! /bin/bash
+black -l 100 .
+cargo fmt
