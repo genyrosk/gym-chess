@@ -2,7 +2,7 @@ import time
 from copy import copy
 
 import numpy as np
-from gym_chess.envs import ChessEnvV1
+from gym_chess import ChessEnvV1
 from gym_chess.test.utils import run_test_funcs
 
 
