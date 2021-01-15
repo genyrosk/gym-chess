@@ -360,7 +360,7 @@ The `v2` environment is over 100 times faster than the `v1` environment. However
 
 ```python
 
-from gym_chess.envs import ChessEnvV1, ChessEnvV2
+from gym_chess import ChessEnvV1, ChessEnvV2
 
 env_v1 = ChessEnvV1()
 env_v2 = ChessEnvV2()

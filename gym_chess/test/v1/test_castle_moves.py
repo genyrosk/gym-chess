@@ -2,7 +2,7 @@ from collections import defaultdict
 from copy import copy
 
 import numpy as np
-from gym_chess.envs import ChessEnvV1
+from gym_chess import ChessEnvV1
 from gym_chess.envs.chess_v1 import (
     KING_ID,
     QUEEN_ID,
