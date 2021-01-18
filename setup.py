@@ -21,7 +21,7 @@ install_requires = []
 
 setup(
     name="gym_chess",
-    version="0.3",
+    version="0.3.1",
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Development Status :: 3 - Alpha",
