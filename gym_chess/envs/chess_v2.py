@@ -47,6 +47,8 @@ ROOK_VALUE = 5
 QUEEN_VALUE = 10
 WIN_REWARD = 100
 LOSS_REWARD = -100
+INVALID_ACTION_REWARD = -10
+VALID_ACTION_REWARD = 10
 
 
 @dataclass
@@ -234,6 +236,11 @@ class ChessEnvV2(gym.Env):
         # validate action
         assert self.action_space.contains(action), "ACTION ERROR {}".format(action)
 
+        # action invalid in current state
+        if action not in self.possible_actions:
+            reward = INVALID_ACTION_REWARD
+            return self.state, reward, self.done, self.info
+
         # Game is done
         if self.done:
             return (
@@ -250,8 +257,13 @@ class ChessEnvV2(gym.Env):
                 self.info,
             )
 
+        # valid action reward
+        reward = INVALID_ACTION_REWARD
         # make move
-        self.state, reward, self.done = self.player_move(action)
+        self.state, move_reward, self.done = self.player_move(action)
+        reward += move_reward
+
+        # opponent play
         opponent_player = self.switch_player()
         self.possible_moves = self.get_possible_moves(player=opponent_player)
         # check if there are no possible_moves for opponent
@@ -327,6 +339,17 @@ class ChessEnvV2(gym.Env):
         return dict(
             # **self.state,
             move_count=self.move_count,
+            current_player=self.current_player,
+            possible_moves=self.possible_moves,
+            # possible_actions=self.possible_actions,
+            white_king_castle_is_possible=self.white_king_castle_is_possible,
+            white_queen_castle_is_possible=self.white_queen_castle_is_possible,
+            black_king_castle_is_possible=self.black_king_castle_is_possible,
+            black_queen_castle_is_possible=self.black_queen_castle_is_possible,
+            white_king_is_checked=self.white_king_is_checked,
+            black_king_is_checked=self.black_king_is_checked,
+            white_king_on_the_board=self.white_king_on_the_board,
+            black_king_on_the_board=self.black_king_on_the_board,
         )
 
     @property
