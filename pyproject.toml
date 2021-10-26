@@ -1,2 +1,23 @@
 [build-system]
-requires = ["setuptools", "wheel", "setuptools-rust"]
+requires = ["maturin>=0.11,<0.12"]
+build-backend = "maturin"
+
+[project]
+name = "gym_chess"
+version = "0.3.3"
+description = "A Python Chess Engine built in Rust"
+authors = [
+    {name = "Evgeny Roskach", email = "e.roskach@gmail.com"},
+]
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Rust",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+]
+requires-python = ">=3.6"
+dependencies = ["gym~=0.21.0", "numpy~=1.21.3", "six~=1.16.0"]
