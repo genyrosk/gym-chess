@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 
-use pyo3::exceptions::PyException;
+use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::collections::HashMap;
@@ -290,6 +290,8 @@ pub struct State {
     pub black_queen_castle_is_possible: bool,
     pub white_king_is_checked: bool,
     pub black_king_is_checked: bool,
+    pub total_full_moves: usize,
+    pub half_moves_since_last_capture: usize,
 }
 
 impl State {
@@ -300,6 +302,8 @@ impl State {
         white_queen_castle_is_possible: bool,
         black_king_castle_is_possible: bool,
         black_queen_castle_is_possible: bool,
+        total_full_moves: usize,
+        half_moves_since_last_capture: usize,
     ) -> Self {
         let _current_player: Color = player_string_to_enum(current_player);
         // check if kings are on board
@@ -332,6 +336,8 @@ impl State {
             black_queen_castle_is_possible: _black_queen_castle_is_possible,
             white_king_is_checked: false,
             black_king_is_checked: false,
+            total_full_moves: total_full_moves,
+            half_moves_since_last_capture: half_moves_since_last_capture,
         };
     }
 
@@ -1243,27 +1249,44 @@ fn square_tuple_to_flat(square: Square) -> usize {
 //     (row as isize, col as isize)
 // }
 
-fn convert_py_state<'a>(_py: Python<'a>, state_py: &'a PyDict) -> PyResult<State> {
-    let board: Board = state_py.get_item("board").unwrap().extract()?;
-    let current_player: &str = state_py.get_item("current_player").unwrap().extract()?;
-    let white_king_castle_is_possible: bool = state_py
-        .get_item("white_king_castle_is_possible")
-        .unwrap()
-        .extract()?;
-    let white_queen_castle_is_possible: bool = state_py
-        .get_item("white_queen_castle_is_possible")
-        .unwrap()
-        .extract()?;
-    let black_king_castle_is_possible: bool = state_py
-        .get_item("black_king_castle_is_possible")
-        .unwrap()
-        .extract()?;
-    let black_queen_castle_is_possible: bool = state_py
-        .get_item("black_queen_castle_is_possible")
-        .unwrap()
-        .extract()?;
+macro_rules! pydict_get_item_or_raise_pyerror {
+    // macth like arm for macro
+    ($pydict:expr, $key:expr) => {
+        match $pydict.get_item($key) {
+            Some(res) => match res.extract() {
+                Ok(val) => val,
+                Err(_e) => {
+                    return Err(PyErr::new::<PyValueError, _>(concat!(
+                        "{}  invalid type",
+                        stringify!($name)
+                    )))
+                }
+            },
+            None => {
+                return Err(PyErr::new::<PyTypeError, _>(concat!(
+                    "{}  must be specified",
+                    stringify!($name)
+                )))
+            }
+        };
+    };
+}
 
-    // create state
+fn convert_py_state<'a>(_py: Python<'a>, state_py: &'a PyDict) -> PyResult<State> {
+    let board: Board = pydict_get_item_or_raise_pyerror!(state_py, "board");
+    let current_player: &str = pydict_get_item_or_raise_pyerror!(state_py, "current_player");
+    let white_king_castle_is_possible: bool =
+        pydict_get_item_or_raise_pyerror!(state_py, "white_king_castle_is_possible");
+    let white_queen_castle_is_possible: bool =
+        pydict_get_item_or_raise_pyerror!(state_py, "white_queen_castle_is_possible");
+    let black_king_castle_is_possible: bool =
+        pydict_get_item_or_raise_pyerror!(state_py, "black_king_castle_is_possible");
+    let black_queen_castle_is_possible: bool =
+        pydict_get_item_or_raise_pyerror!(state_py, "black_queen_castle_is_possible");
+    let total_full_moves: usize = pydict_get_item_or_raise_pyerror!(state_py, "total_full_moves");
+    let half_moves_since_last_capture: usize =
+        pydict_get_item_or_raise_pyerror!(state_py, "half_moves_since_last_capture");
+
     let state = State::new(
         board,
         current_player,
@@ -1271,6 +1294,8 @@ fn convert_py_state<'a>(_py: Python<'a>, state_py: &'a PyDict) -> PyResult<State
         white_queen_castle_is_possible,
         black_king_castle_is_possible,
         black_queen_castle_is_possible,
+        total_full_moves,
+        half_moves_since_last_capture,
     );
     return Ok(state);
 }
