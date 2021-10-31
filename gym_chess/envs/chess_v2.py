@@ -62,19 +62,69 @@ class Piece:
 
 
 PIECES = [
-    Piece(icon="♙", desc=PAWN_DESC, color=BLACK, type=PAWN, id=-PAWN_ID, value=PAWN_VALUE),
-    Piece(icon="♘", desc=KNIGHT_DESC, color=BLACK, type=KNIGHT, id=-KNIGHT_ID, value=KNIGHT_VALUE),
-    Piece(icon="♗", desc=BISHOP_DESC, color=BLACK, type=BISHOP, id=-BISHOP_ID, value=BISHOP_VALUE),
-    Piece(icon="♖", desc=ROOK_DESC, color=BLACK, type=ROOK, id=-ROOK_ID, value=ROOK_VALUE),
-    Piece(icon="♕", desc=QUEEN_DESC, color=BLACK, type=QUEEN, id=-QUEEN_ID, value=QUEEN_VALUE),
+    Piece(
+        icon="♙", desc=PAWN_DESC, color=BLACK, type=PAWN, id=-PAWN_ID, value=PAWN_VALUE
+    ),
+    Piece(
+        icon="♘",
+        desc=KNIGHT_DESC,
+        color=BLACK,
+        type=KNIGHT,
+        id=-KNIGHT_ID,
+        value=KNIGHT_VALUE,
+    ),
+    Piece(
+        icon="♗",
+        desc=BISHOP_DESC,
+        color=BLACK,
+        type=BISHOP,
+        id=-BISHOP_ID,
+        value=BISHOP_VALUE,
+    ),
+    Piece(
+        icon="♖", desc=ROOK_DESC, color=BLACK, type=ROOK, id=-ROOK_ID, value=ROOK_VALUE
+    ),
+    Piece(
+        icon="♕",
+        desc=QUEEN_DESC,
+        color=BLACK,
+        type=QUEEN,
+        id=-QUEEN_ID,
+        value=QUEEN_VALUE,
+    ),
     Piece(icon="♔", desc=KING_DESC, color=BLACK, type=KING, id=-KING_ID, value=0),
     Piece(icon=".", desc="", color=None, type=None, id=EMPTY_SQUARE_ID, value=0),
     Piece(icon="♚", desc=KING_DESC, color=WHITE, type=KING, id=KING_ID, value=0),
-    Piece(icon="♛", desc=QUEEN_DESC, color=WHITE, type=QUEEN, id=QUEEN_ID, value=QUEEN_VALUE),
-    Piece(icon="♜", desc=ROOK_DESC, color=WHITE, type=ROOK, id=ROOK_ID, value=ROOK_VALUE),
-    Piece(icon="♝", desc=BISHOP_DESC, color=WHITE, type=BISHOP, id=BISHOP_ID, value=BISHOP_VALUE),
-    Piece(icon="♞", desc=KNIGHT_DESC, color=WHITE, type=KNIGHT, id=KNIGHT_ID, value=KNIGHT_VALUE),
-    Piece(icon="♟", desc=PAWN_DESC, color=WHITE, type=PAWN, id=PAWN_ID, value=PAWN_VALUE),
+    Piece(
+        icon="♛",
+        desc=QUEEN_DESC,
+        color=WHITE,
+        type=QUEEN,
+        id=QUEEN_ID,
+        value=QUEEN_VALUE,
+    ),
+    Piece(
+        icon="♜", desc=ROOK_DESC, color=WHITE, type=ROOK, id=ROOK_ID, value=ROOK_VALUE
+    ),
+    Piece(
+        icon="♝",
+        desc=BISHOP_DESC,
+        color=WHITE,
+        type=BISHOP,
+        id=BISHOP_ID,
+        value=BISHOP_VALUE,
+    ),
+    Piece(
+        icon="♞",
+        desc=KNIGHT_DESC,
+        color=WHITE,
+        type=KNIGHT,
+        id=KNIGHT_ID,
+        value=KNIGHT_VALUE,
+    ),
+    Piece(
+        icon="♟", desc=PAWN_DESC, color=WHITE, type=PAWN, id=PAWN_ID, value=PAWN_VALUE
+    ),
 ]
 
 ID_TO_COLOR = {piece.id: piece.color for piece in PIECES}
@@ -213,7 +263,9 @@ class ChessEnvV2(gym.Env):
             self.state, _, _ = self.player_move(white_first_action)
             self.move_count += 1
             self.current_player = BLACK
-            self.possible_moves = self.get_possible_moves(state=self.state, player=BLACK)
+            self.possible_moves = self.get_possible_moves(
+                state=self.state, player=BLACK
+            )
         return self.state
 
     def step(self, action):
@@ -310,17 +362,25 @@ class ChessEnvV2(gym.Env):
             black_queen_castle_is_possible=self.black_queen_castle_is_possible,
             white_king_is_checked=self.white_king_is_checked,
             black_king_is_checked=self.black_king_is_checked,
+            total_full_moves=0,
+            half_moves_since_last_capture=1,
         )
 
     @state.setter
     def state(self, state):
         self.board = state.get("board")
         self.white_king_castle_is_possible = state.get("white_king_castle_is_possible")
-        self.white_queen_castle_is_possible = state.get("white_queen_castle_is_possible")
+        self.white_queen_castle_is_possible = state.get(
+            "white_queen_castle_is_possible"
+        )
         self.black_king_castle_is_possible = state.get("black_king_castle_is_possible")
-        self.black_queen_castle_is_possible = state.get("black_queen_castle_is_possible")
+        self.black_queen_castle_is_possible = state.get(
+            "black_queen_castle_is_possible"
+        )
         self.white_king_is_checked = state.get("white_king_is_checked")
         self.black_king_is_checked = state.get("black_king_is_checked")
+        self.total_full_moves = state.get("total_full_moves")
+        self.half_moves_since_last_capture = state.get("half_moves_since_last_capture")
 
     @property
     def possible_moves(self):
@@ -381,9 +441,15 @@ class ChessEnvV2(gym.Env):
 
     def player_can_castle(self, player):
         if player == WHITE:
-            return self.white_king_castle_is_possible and self.white_queen_castle_is_possible
+            return (
+                self.white_king_castle_is_possible
+                and self.white_queen_castle_is_possible
+            )
         else:
-            return self.black_king_castle_is_possible and self.black_queen_castle_is_possible
+            return (
+                self.black_king_castle_is_possible
+                and self.black_queen_castle_is_possible
+            )
 
     def get_other_player(self, player):
         if player == WHITE:
@@ -527,8 +593,9 @@ class ChessEnvV2(gym.Env):
         _from, _to = action // 64, action % 64
         x0, y0 = _from // 8, _from % 8
         x1, y1 = _to // 8, _to % 8
+        move = ((x0, y0), (x1, y1))
         if not as_string:
-            return ((x0, y0), (x1, y1))
+            return move
         return self.move_to_str_code(move)
 
     def move_to_str_code(self, move):
