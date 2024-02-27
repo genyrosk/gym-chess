@@ -700,8 +700,8 @@ pub fn next_state(state: &State, player: Color, move_struct: MoveStruct) -> (Sta
                 // Pawn becomes Queen
                 let piece_type = *ID_TO_TYPE.get(&piece_to_move).unwrap();
                 if piece_type == PieceType::Pawn {
-                    if (player == Color::White && _to.0 == 7)
-                        || (player == Color::Black && _to.0 == 0)
+                    if (player == Color::White && _to.0 == 0)
+                        || (player == Color::Black && _to.0 == 7)
                     {
                         new_state.board[_to.0][_to.1] = QUEEN_ID * player.to_int();
                         reward += CONVERT_PAWN_TO_QUEEN_REWARD;
@@ -812,7 +812,7 @@ fn king_moves(
                 moves.push((coords, square));
             }
         } else {
-            let add = king_playable_move(state, player, square, squares_under_attack_map);
+            let add = king_playable_move(state, player, square, squares_under_attack_map, coords);
             if add == true {
                 moves.push((coords, square));
             }
@@ -932,26 +932,26 @@ fn pawn_moves(state: &State, player: Color, coords: Square, attack: bool) -> Vec
             }
         }
     } else {
-        {
-            let x = one_step_square.0 as usize;
-            let y = one_step_square.1 as usize;
-            if square_is_on_board(one_step_square) && state.board[x][y] == 0 {
-                moves.push((coords, one_step_square));
-            }
+    
+        let x = one_step_square.0 as usize;
+        let y = one_step_square.1 as usize;
+        if square_is_on_board(one_step_square) && state.board[x][y] == 0 {
+            moves.push((coords, one_step_square));
         }
-        {
-            let x = two_step_square.0 as usize;
-            let y = two_step_square.1 as usize;
-            if square_is_on_board(two_step_square) {
-                if (player == Color::White && coords.0 == 6)
-                    || (player == Color::Black && coords.0 == 1)
-                {
-                    if state.board[x][y] == 0 {
-                        moves.push((coords, two_step_square));
-                    }
+    
+        
+        let a = two_step_square.0 as usize;
+        let b = two_step_square.1 as usize;
+        if square_is_on_board(two_step_square) {
+            if (player == Color::White && coords.0 == 6)
+                || (player == Color::Black && coords.0 == 1)
+            {
+                if (state.board[a][b] == 0 && state.board[x][y] == 0) {
+                    moves.push((coords, two_step_square));
                 }
             }
         }
+        
         for square in attack_squares.iter().cloned() {
             if square_is_on_board(square) && is_piece_from_other_player(state, player, square) {
                 moves.push((coords, square));
@@ -1115,14 +1115,27 @@ fn king_playable_move(
     player: Color,
     square: Square,
     squares_under_attack_map: &HashMap<usize, bool>,
+    coords: Square,
 ) -> bool {
     let other_player = get_other_player(player);
     if !square_is_on_board(square) {
         return false;
     }
 
+    if is_piece_from_player(state, player, square) {
+        return false;
+    }
+
+    //changed to accomidate the xray attack problem
+    let mut squares_under_check_map: HashMap<usize, bool> = HashMap::new();
+    let mut temp_state = state.clone();
+    let row = coords.0 as usize;
+    let col = coords.1 as usize;
+    temp_state.board[row][col] = 0; //removes the king from the board
+    squares_under_check_map = get_squares_under_attack_by_player(&temp_state, other_player);
+
     let square_flat = square_tuple_to_flat(square);
-    match squares_under_attack_map.get(&square_flat) {
+    match squares_under_check_map.get(&square_flat) {
         Some(&_) => return false,
         None => {}
     }
@@ -1130,9 +1143,7 @@ fn king_playable_move(
     if square_is_empty(state, square) || is_piece_from_player(state, other_player, square) {
         return true;
     }
-    if is_piece_from_player(state, player, square) {
-        return false;
-    }
+
     if is_king_from_player(state, other_player, square) {
         panic!("KINGS NEXT TO EACH OTHER ERROR");
     }

@@ -40,6 +40,15 @@ def test_pawn_basic_moves():
     EXPECTED_BOARD[3, 0] = -PAWN_ID
     assert (env.state == EXPECTED_BOARD).all()
 
+# Pawn 2 square move
+def test_pawn_double_move():
+    BOARD = copy(BASIC_BOARD)
+    BOARD[5, 0] = -PAWN_ID
+    BOARD[6, 0] = PAWN_ID
+    env = ChessEnvV1(opponent="none", initial_state=BOARD)
+    # player_1
+    actions = env.get_possible_actions()
+    assert len(actions) == 0
 
 if __name__ == "__main__":
     run_test_funcs(__name__)

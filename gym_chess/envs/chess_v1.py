@@ -1,7 +1,7 @@
 import os
 import sys
 from collections import defaultdict
-from copy import copy
+from copy import copy, deepcopy
 from dataclasses import dataclass
 from six import StringIO
 from pprint import pprint
@@ -40,16 +40,16 @@ BLACK_ID = -1
 WHITE = "WHITE"
 BLACK = "BLACK"
 
-CONVERT_PAWN_TO_QUEEN_REWARD = 10
+CONVERT_PAWN_TO_QUEEN_REWARD = 8
 PAWN_VALUE = 1
 KNIGHT_VALUE = 3
 BISHOP_VALUE = 3
 ROOK_VALUE = 5
-QUEEN_VALUE = 10
+QUEEN_VALUE = 9
 WIN_REWARD = 100
 LOSS_REWARD = -100
 INVALID_ACTION_REWARD = -10
-VALID_ACTION_REWARD = 10
+VALID_ACTION_REWARD = -0.1
 
 
 @dataclass
@@ -123,7 +123,8 @@ def make_random_policy(np_random, bot_player):
         moves = env.possible_moves
         # No moves left
         if len(moves) == 0:
-            return "resign"
+            print("Stalemate for opponent")
+            return "stalemate"
         else:
             idx = np.random.choice(np.arange(len(moves)))
             return moves[idx]
@@ -140,11 +141,13 @@ class ChessEnvV1(gym.Env):
         opponent="random",
         log=True,
         initial_state=DEFAULT_BOARD,
+        end="checkmate"
     ):
         # constants
         self.moves_max = 149
         self.log = log
         self.initial_state = initial_state
+        self.end = end
 
         #
         # Observation + Action spaces
@@ -235,26 +238,30 @@ class ChessEnvV1(gym.Env):
         # action invalid in current state
         if action not in self.possible_actions:
             reward = INVALID_ACTION_REWARD
+            print("INVALID ACTION REWARD")
             return self.state, reward, self.done, self.info
 
         # Game is done
         if self.done:
-            return (
-                self.state,
-                0.0,
-                True,
-                self.info,
-            )
+            return (self.state, 0.0, True, self.info,)
         if self.move_count > self.moves_max:
-            return (
-                self.state,
-                0.0,
-                True,
-                self.info,
-            )
+            return (self.state, 0.0, True, self.info,)
 
         # valid action reward
-        reward = INVALID_ACTION_REWARD
+        reward = VALID_ACTION_REWARD
+
+        if(self.end == "promotion"):
+            # checks if a pawn has just been promoted
+            _from, _to = self.action_to_move(action)
+            if(self.state[int(_from[0])][int(_from[1])] == PAWN_ID or self.state[int(_from[0])][int(_from[1])] == -PAWN_ID):
+                if (self.player == WHITE and _to[0] == 0) or (self.player == BLACK and _to[0] == 7):
+                    # game is over
+                    self.done = True
+                    reward += WIN_REWARD
+                    self.state, move_reward, _ = self.player_move(action)
+                    reward += move_reward
+                    return self.state, reward, self.done, self.info
+
         # make move
         self.state, move_reward, self.done = self.player_move(action)
         reward += move_reward
@@ -263,11 +270,11 @@ class ChessEnvV1(gym.Env):
         opponent_player = self.switch_player()
         self.possible_moves = self.get_possible_moves(player=opponent_player)
         # check if there are no possible_moves for opponent
-        if not self.possible_moves and self.king_is_checked(
-            state=self.state, player=opponent_player
-        ):
+        if not self.possible_moves:
+            if self.king_is_checked(state=self.state, player=opponent_player):
+                reward += WIN_REWARD
             self.done = True
-            reward += WIN_REWARD
+
         if self.done:
             return self.state, reward, self.done, self.info
 
@@ -275,18 +282,29 @@ class ChessEnvV1(gym.Env):
         if self.opponent_policy:
             opponent_move = self.opponent_policy(self)
             opponent_action = self.move_to_action(opponent_move)
+
+            if(self.end == "promotion"):
+                # checks if a pawn has just been promoted
+                _from, _to = opponent_move
+                if(self.state[int(_from[0])][int(_from[1])] == PAWN_ID or self.state[int(_from[0])][int(_from[1])] == -PAWN_ID):
+                    if (opponent_player == WHITE and _to[0] == 0) or (opponent_player == BLACK and _to[0] == 7):
+                        # game is over
+                        self.done = True
+                        reward += LOSS_REWARD
+                        self.state, opp_reward, _ = self.player_move(opponent_action)
+                        reward -= opp_reward
+                        return self.state, reward, self.done, self.info
+                    
             # make move
             self.state, opp_reward, self.done = self.player_move(opponent_action)
             agent_player = self.switch_player()
             self.possible_moves = self.get_possible_moves(player=agent_player)
             reward -= opp_reward
             # check if there are no possible_moves for opponent
-            if not self.possible_moves and self.king_is_checked(
-                state=self.state, player=agent_player
-            ):
+            if not self.possible_moves:
+                if self.king_is_checked(state=self.state, player=agent_player):
+                    reward += LOSS_REWARD
                 self.done = True
-                reward += LOSS_REWARD
-
         # increment count on WHITE
         if self.current_player == WHITE:
             self.move_count += 1
@@ -388,7 +406,7 @@ class ChessEnvV1(gym.Env):
             # Pawn becomes Queen
             # TODO: allow player to choose the piece into which the pawn converts
             if ID_TO_TYPE[piece_to_move] == PAWN:
-                if (player == WHITE and _to[0] == 7) or (player == BLACK and _to[0] == 0):
+                if (player == WHITE and _to[0] == 0) or (player == BLACK and _to[0] == 7):
                     new_state[_to[0], _to[1]] = QUEEN_ID * self.player_to_int(player)
                     reward += CONVERT_PAWN_TO_QUEEN_REWARD
 
@@ -449,8 +467,8 @@ class ChessEnvV1(gym.Env):
             self.black_queen_castle_possible = False
         return state
 
-    def state_to_grid(self):
-        grid = [[f" {ID_TO_ICON[square]} " for square in row] for row in self.state]
+    def state_to_grid(self, state):
+        grid = [[f" {ID_TO_ICON[square]} " for square in row] for row in state]
         return grid
 
     def render_grid(self, grid, mode="human"):
@@ -476,12 +494,12 @@ class ChessEnvV1(gym.Env):
 
     def render(self, mode="human"):
         """Render the playing board"""
-        grid = self.state_to_grid()
+        grid = self.state_to_grid(self.state)
         out = self.render_grid(grid, mode=mode)
         return out
 
     def render_moves(self, moves, mode="human"):
-        grid = self.state_to_grid()
+        grid = self.state_to_grid(self.state)
         for move in moves:
             if type(move) is str and move in CASTLE_MOVES:
                 if move == CASTLE_QUEEN_SIDE_WHITE:
@@ -668,7 +686,7 @@ class ChessEnvV1(gym.Env):
         else:
             for step in steps:
                 square = coords + np.array(step, dtype=np.int8)
-                if self.king_move(player, state, square, squares_under_attack_hashmap):
+                if self.king_move(player, state, square, squares_under_attack_hashmap, coords):
                     moves.append([coords, square])
         return moves
 
@@ -777,11 +795,11 @@ class ChessEnvV1(gym.Env):
             if ChessEnvV1.square_is_on_board(one_step_square) and self.state[x, y] == 0:
                 moves.append([coords, one_step_square])
 
-            x, y = two_step_square
+            a, b = two_step_square
             if ChessEnvV1.square_is_on_board(two_step_square) and (
                 (player == WHITE and coords[0] == 6) or (player == BLACK and coords[0] == 1)
             ):
-                if self.state[x, y] == 0:
+                if self.state[x, y] == 0 and self.state[a, b] == 0:
                     moves.append([coords, two_step_square])
 
             # attacks only opponent's pieces
@@ -869,7 +887,7 @@ class ChessEnvV1(gym.Env):
                 moves.append(CASTLE_KING_SIDE_BLACK)
         return moves
 
-    def king_move(self, player, state, square, squares_under_attack_hashmap):
+    def king_move(self, player, state, square, squares_under_attack_hashmap, coords):
         """
         return squares to which the king can move,
         i.e. unattacked squares that can be:
@@ -880,18 +898,33 @@ class ChessEnvV1(gym.Env):
         """
         if not ChessEnvV1.square_is_on_board(square):
             return False
-        elif squares_under_attack_hashmap[tuple(square)]:
+        if squares_under_attack_hashmap[tuple(square)]:
             return False
-        elif self.is_piece_from_player(player, state, square):
+        if self.is_piece_from_player(player, state, square):
             return False
-        elif self.is_king_from_other_player(player, state, square):
+        ##add if statement that deals with x ray attacks
+        if self.king_is_checked(state=state, player=player):
+            if player == WHITE:
+                color_id = 1
+            elif player == BLACK:
+                color_id = -1
+            else:
+                raise Exception("player must be either WHITE or BLACK")
+            TEMP_BOARD = deepcopy(state)
+            TEMP_BOARD[coords[0]][coords[1]] = EMPTY_SQUARE_ID
+            TEMP_BOARD[square[0]][square[1]] = KING_ID * color_id
+            #print("TEMP_BOARD:")
+            #self.render_grid(self.state_to_grid(TEMP_BOARD))
+            if self.king_is_checked(state=TEMP_BOARD, player=player):
+                return False
+        if self.is_king_from_other_player(player, state, square):
             raise Exception(f"KINGS NEXT TO EACH OTHER ERROR {square}")
-        elif self.is_piece_from_other_player(player, state, square):
+        if self.is_piece_from_other_player(player, state, square):
             return True
-        elif state[square[0], square[1]] == 0:  # empty square
+        if state[square[0], square[1]] == 0:  # empty square
             return True
-        else:
-            raise Exception(f"KING MOVEMENT ERROR {square}")
+        
+        raise Exception(f"KING MOVEMENT ERROR {square}")
 
     def king_attack(self, player, state, square):
         """

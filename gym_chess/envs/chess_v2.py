@@ -39,16 +39,16 @@ PAWN_DESC = ""
 WHITE = "WHITE"
 BLACK = "BLACK"
 
-CONVERT_PAWN_TO_QUEEN_REWARD = 10
+CONVERT_PAWN_TO_QUEEN_REWARD = 8
 PAWN_VALUE = 1
 KNIGHT_VALUE = 3
 BISHOP_VALUE = 3
 ROOK_VALUE = 5
-QUEEN_VALUE = 10
+QUEEN_VALUE = 9
 WIN_REWARD = 100
 LOSS_REWARD = -100
 INVALID_ACTION_REWARD = -10
-VALID_ACTION_REWARD = 10
+VALID_ACTION_REWARD = 0
 
 
 @dataclass
@@ -119,7 +119,8 @@ def make_random_policy(np_random, bot_player):
         moves = env.possible_moves
         # No moves left
         if len(moves) == 0:
-            return "resign"
+            print("Stalemate for opponent")
+            return "stalemate"
         else:
             idx = np.random.choice(np.arange(len(moves)))
             return moves[idx]
@@ -136,11 +137,13 @@ class ChessEnvV2(gym.Env):
         opponent="random",
         log=True,
         initial_board=DEFAULT_BOARD,
+        end = "checkmate"
     ):
         # constants
         self.moves_max = 149
         self.log = log
         self.initial_board = initial_board
+        self.end = end
 
         # engine
         self.engine = ChessEngine()
@@ -167,16 +170,16 @@ class ChessEnvV2(gym.Env):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
 
-        # Update the random policy if needed
-        if isinstance(self.opponent, str):
-            if self.opponent == "random":
-                self.opponent_policy = make_random_policy(self.np_random, self.player_2)
-            elif self.opponent == "none":
-                self.opponent_policy = None
-            else:
-                raise error.Error(f"Unrecognized opponent policy {self.opponent}")
-        else:
-            self.opponent_policy = self.opponent
+        # # Update the random policy if needed
+        # if isinstance(self.opponent, str):
+        #     if self.opponent == "random":
+        #         self.opponent_policy = make_random_policy(self.np_random, self.player_2)
+        #     elif self.opponent == "none":
+        #         self.opponent_policy = None
+        #     else:
+        #         raise error.Error(f"Unrecognized opponent policy {self.opponent}")
+        # else:
+        #     self.opponent_policy = self.opponent
 
         return [seed]
 
@@ -209,14 +212,14 @@ class ChessEnvV2(gym.Env):
             white_first_move = self.opponent_policy(self)
             white_first_action = self.move_to_action(white_first_move)
             # make move
-            # self.board, _, _, _ = self.step(white_first_action)
+            # self.board, _, _, _ = self.white_step(white_first_action)
             self.state, _, _ = self.player_move(white_first_action)
             self.move_count += 1
             self.current_player = BLACK
             self.possible_moves = self.get_possible_moves(state=self.state, player=BLACK)
         return self.state
 
-    def step(self, action):
+    def white_step(self, action):
         """
         Run one timestep of the environment's dynamics. When end of episode
         is reached, reset() should be called to reset the environment's internal state.
@@ -238,54 +241,124 @@ class ChessEnvV2(gym.Env):
 
         # action invalid in current state
         if action not in self.possible_actions:
-            reward = INVALID_ACTION_REWARD
-            return self.state, reward, self.done, self.info
+            w_reward = INVALID_ACTION_REWARD
+            print("WHITE INVALID ACTION REWARD")
+            return self.state, w_reward, self.done, self.info
 
         # Game is done
         if self.done:
-            return (
-                self.state,
-                0.0,
-                True,
-                self.info,
-            )
+            return (self.state, 0.0, True, self.info)
+        # Number of moves has exceeded the max
         if self.move_count > self.moves_max:
-            return (
-                self.state,
-                0.0,
-                True,
-                self.info,
-            )
+            return (self.state, 0.0, True, self.info)
 
         # valid action reward
-        reward = INVALID_ACTION_REWARD
+        w_reward = VALID_ACTION_REWARD
+        
+        if(self.end == "promotion"):
+            # checks if a pawn has just been promoted
+            _from, _to = self.action_to_move(action)
+            board = self.state['board']
+            if(board[int(_from[0])][int(_from[1])] == PAWN_ID or board[int(_from[0])][int(_from[1])] == -PAWN_ID):
+                if (self.player == WHITE and _to[0] == 0) or (self.player == BLACK and _to[0] == 7):
+                    # game is over
+                    self.done = True
+                    w_reward += WIN_REWARD
+                    self.state, move_reward, _ = self.player_move(action)
+                    w_reward += move_reward
+                    return self.state,w_reward, self.done, self.info
+        
         # make move
         self.state, move_reward, self.done = self.player_move(action)
-        reward += move_reward
+
+        # checks if all the opponants pieces have been taken
+        if(not self.has_pieces(self.state['board'], self.player_2)):
+            # game is over
+            self.done = True
+            w_reward += WIN_REWARD
+            w_reward += move_reward
+            return self.state,w_reward, self.done, self.info
+        
+        w_reward += move_reward
 
         # opponent play
         opponent_player = self.switch_player()
         self.possible_moves = self.get_possible_moves(player=opponent_player)
-        # check if there are no possible_moves for opponent
-        if not self.possible_moves and self.king_is_checked(player=opponent_player):
+         # check if there are no possible_moves for opponent
+        if not self.possible_moves:
+            if self.king_is_checked(player=opponent_player):
+                # checkmate
+                w_reward += WIN_REWARD
             self.done = True
-            reward += WIN_REWARD
-        if self.done:
-            return self.state, reward, self.done, self.info
 
-        # Bot Opponent play
-        if self.opponent_policy:
-            opponent_move = self.opponent_policy(self)
-            opponent_action = self.move_to_action(opponent_move)
-            # make move
-            self.state, opp_reward, self.done = self.player_move(opponent_action)
-            agent_player = self.switch_player()
-            self.possible_moves = self.get_possible_moves(player=agent_player)
-            reward -= opp_reward
-            # check if there are no possible_moves for opponent
-            if not self.possible_moves and self.king_is_checked(player=agent_player):
+        return self.state, w_reward, self.done, self.info
+
+    def black_step(self, action):
+        """
+        Run half a timestep of the environment's dynamics. When end of episode
+        is reached, reset() should be called to reset the environment's internal state.
+
+        Input
+        -----
+        action : an action provided by the environment
+
+        Outputs
+        -------
+        (observation, reward, done, info)
+        observation : agent's observation of the current environment
+        reward [Float] : amount of reward due to the previous action
+        done : a boolean, indicating whether the episode has ended
+        info : a dictionary containing other diagnostic information from the previous action
+        """
+        # validate action
+        assert self.action_space.contains(action), "ACTION ERROR {}".format(action)
+
+        # opponent play
+        opponent_player = self.current_player
+
+        # action invalid in current state
+        if action not in self.possible_actions:
+            reward = INVALID_ACTION_REWARD
+            print("BLACK INVALID ACTION REWARD")
+            return self.state, reward, self.done, self.info
+        
+        reward = 0
+
+        opponent_move = self.action_to_move(action)
+        opponent_action = action
+        
+        if(self.end == "promotion"):
+            # checks if a pawn has just been promoted
+            _from, _to = opponent_move
+            board = self.state['board']
+            if(board[int(_from[0])][int(_from[1])] == PAWN_ID or board[int(_from[0])][int(_from[1])] == -PAWN_ID):
+                if (opponent_player == WHITE and _to[0] == 0) or (opponent_player == BLACK and _to[0] == 7):
+                    # game is over
+                    self.done = True
+                    reward += LOSS_REWARD
+                    self.state, opp_reward, _ = self.player_move(opponent_action)
+                    reward -= opp_reward
+                    return self.state, reward, self.done, self.info
+        
+        # make move
+        self.state, opp_reward, self.done = self.player_move(opponent_action)
+        if(self.end == "promotion"):
+            # checks if all the opponants pieces have been taken
+            if(not self.has_pieces(self.state['board'], self.player)):
+                # game is over
                 self.done = True
                 reward += LOSS_REWARD
+                reward -= opp_reward
+                return self.state, reward, self.done, self.info
+            
+        agent_player = self.switch_player()
+        self.possible_moves = self.get_possible_moves(player=agent_player)
+        reward -= opp_reward
+        # check if there are no possible_moves for opponent
+        if not self.possible_moves:
+            if self.king_is_checked(player=agent_player):
+                reward += LOSS_REWARD
+            self.done = True
 
         # increment count on WHITE
         if self.current_player == WHITE:
@@ -378,6 +451,18 @@ class ChessEnvV2(gym.Env):
                 if square == piece_id:
                     return True
         return False
+    
+    def has_pieces(self, board, player):
+        if(player == BLACK):
+            ID = -1
+        else:
+            ID = 1
+        for row in board:
+            for square in row:
+                if(square != 0):    # if square is not empty
+                    if ID*square > 0:
+                        return True
+        return False                    
 
     def player_can_castle(self, player):
         if player == WHITE:
@@ -419,8 +504,10 @@ class ChessEnvV2(gym.Env):
         next_state, reward = self.engine.next_state(state, player, move_str)
         return next_state, reward
 
-    def board_to_grid(self):
-        grid = [[f" {ID_TO_ICON[square]} " for square in row] for row in self.board]
+    def board_to_grid(self, board=None):
+        if(board == None):
+            board = self.board
+        grid = [[f" {ID_TO_ICON[square]} " for square in row] for row in board]
         return grid
 
     def render_grid(self, grid, mode="human"):
@@ -596,7 +683,48 @@ class ChessEnvV2(gym.Env):
     def is_resignation(self, action):
         return False
 
-    def encode_board(self):
+    def encode_board(self, board=None):
+        if(board == None):
+            board = self.board
+
         mapping = "0ABCDEFfedcba"
-        encoding = "".join([mapping[val] for row in self.board for val in row])
+        encoding = "".join([mapping[val] for row in board for val in row])
         return encoding
+    
+    def encode_state(self, state=None):
+        if(state == None):
+            state = self.state
+        encoding = self.encode_board(state['board'])
+        # add extra parts of state to encoding
+        return encoding
+    
+    def reverse_state_encoding(self, state=None):
+        if(state == None):
+            state = self.state
+
+        if(type(state) == dict):
+            encoded_state = self.encode_state(state=state)
+        elif(type(state) == str):
+            encoded_state = state
+        else:
+            raise ValueError("Reverse state type encoding error")
+        
+        # add extra parts to do state not just board
+        reversed = encoded_state[::-1].swapcase()
+        
+        return reversed
+
+    def reverse_board(self, board):
+        reversed_board = board[::-1]
+        for i in range(8):
+            reversed_board[i] = reversed_board[i][::-1]
+            for j in range(8):
+                reversed_board[i][j] *= -1
+        return reversed_board
+    
+    def reverse_action(self, action):
+        return (4095-action)
+    
+    def show_encoded_state(self, state):
+        for i in range(8):
+            print(state[8*i:8*i+8])

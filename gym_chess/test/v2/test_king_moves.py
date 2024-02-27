@@ -48,6 +48,20 @@ def test_king_moves_2():
     assert squares_attacked == expected_attacks
     assert not king_is_checked
 
+# King getting out of check
+def test_king_check():
+    BOARD = copy(BASIC_BOARD)
+    BOARD[0, 4] = KING_ID
+    BOARD[0, 0] = -ROOK_ID
+    env = ChessEnvV2(opponent="none", initial_board=BOARD)
+    moves = env.get_possible_moves()
+    env.render_moves(moves)
+    king_is_checked = env.white_king_is_checked
+    expected_moves = set([(1, 3), (1, 4), (1, 5)])
+    available_moves = set([tuple(move[1]) for move in moves])
+    assert expected_moves == available_moves
+    assert king_is_checked
+
 
 if __name__ == "__main__":
     run_test_funcs(__name__)
